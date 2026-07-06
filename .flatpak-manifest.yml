@@ -30,6 +30,21 @@ cleanup:
 
 modules:
 
+  - name: libplacebo
+    buildsystem: meson
+    config-opts:
+      - -Dglslang=disabled
+      - -Dd3d11=disabled
+      - -Ddemos=false
+    sources:
+      - type: git
+        url: https://github.com/haasn/libplacebo.git
+        commit: cee9b076f2c63104ccfd497fa79c39a867293ec4
+        tag: v7.360.1
+        x-checker-data:
+          type: git
+          tag-pattern: ^v([\d.]+)$
+
   - name: libmpv
     buildsystem: meson
     config-opts:
@@ -134,21 +149,6 @@ modules:
               project-id: 9265
               stable-only: true
               url-template: https://www.freedesktop.org/software/uchardet/releases/uchardet-$version.tar.xz
-
-      - name: libplacebo
-        buildsystem: meson
-        config-opts:
-          - -Dglslang=disabled
-          - -Dd3d11=disabled
-          - -Ddemos=false
-        sources:
-          - type: git
-            url: https://github.com/haasn/libplacebo.git
-            commit: cee9b076f2c63104ccfd497fa79c39a867293ec4
-            tag: v7.360.1
-            x-checker-data:
-              type: git
-              tag-pattern: ^v([\d.]+)$
 
   - name: wiliwili
     buildsystem: cmake-ninja
