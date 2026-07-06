@@ -469,6 +469,7 @@
         "bottom": "下",
         "color": "カラー",
         "advanced": "高度",
+        "merge": "重複弾幕を結合",
         "level": "フィルターレベル",
         "level_n": "レベル {}",
         "level_live": "弾幕フィルタレベル",

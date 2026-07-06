@@ -39,6 +39,7 @@ private:
     BRLS_BIND(brls::BooleanCell, cellBottom, "player/danmaku/filter/bottom");
     BRLS_BIND(brls::BooleanCell, cellColor, "player/danmaku/filter/color");
     BRLS_BIND(brls::BooleanCell, cellAdvanced, "player/danmaku/filter/advanced");
+    BRLS_BIND(brls::BooleanCell, cellMerge, "player/danmaku/filter/merge");
 
     BRLS_BIND(BiliSelectorCell, cellArea, "player/danmaku/style/area");
     BRLS_BIND(BiliSelectorCell, cellAlpha, "player/danmaku/style/alpha");

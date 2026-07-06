@@ -469,6 +469,7 @@
         "bottom": "하단",
         "color": "색상",
         "advanced": "고급 설정",
+        "merge": "중복 탄막 합치기",
         "level": "필터 수준",
         "level_n": "수준 {}",
         "level_live": "탄막 필터 수준",

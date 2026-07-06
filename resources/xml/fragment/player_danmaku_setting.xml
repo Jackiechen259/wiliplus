@@ -108,6 +108,9 @@
                     <brls:BooleanCell
                             id="player/danmaku/filter/advanced"/>
 
+                    <brls:BooleanCell
+                            id="player/danmaku/filter/merge"/>
+
                 </brls:Box>
                 <brls:Header
                         width="auto"

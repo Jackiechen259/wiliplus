@@ -469,6 +469,7 @@
         "bottom": "底部",
         "color": "彩色",
         "advanced": "高級",
+        "merge": "合併重複彈幕",
         "level": "按等級篩選",
         "level_n": "等級 {}",
         "level_live": "直播過濾等級",

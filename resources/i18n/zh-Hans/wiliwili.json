@@ -469,6 +469,7 @@
         "bottom": "底部弹幕",
         "color": "彩色弹幕",
         "advanced": "高级弹幕",
+        "merge": "合并重复弹幕",
         "level": "过滤等级",
         "level_n": "{}级",
         "level_live": "直播过滤等级",

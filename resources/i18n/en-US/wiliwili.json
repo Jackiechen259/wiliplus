@@ -469,6 +469,7 @@
         "bottom": "Bottom",
         "color": "Color",
         "advanced": "Advanced",
+        "merge": "Merge duplicate danmaku",
         "level": "Filter level",
         "level_n": "Level {}",
         "level_live": "Danmaku filter level",

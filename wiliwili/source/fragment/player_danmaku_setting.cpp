@@ -80,16 +80,23 @@ PlayerDanmakuSetting::PlayerDanmakuSetting(bool isLiveMode) {
                                  DanmakuCore::instance().refresh();
                                  return true;
                              });
+    this->cellMerge->init("wiliwili/player/danmaku/filter/merge"_i18n, DanmakuCore::DANMAKU_MERGE, [](bool data) {
+        DanmakuCore::DANMAKU_MERGE = data;
+        DanmakuCore::save();
+        return true;
+    });
 
     // 根据当前模式设置过滤等级控件的可见性
     if (isLiveMode) {
         // 播放直播时，隐藏普通弹幕等级设置，显示直播弹幕等级设置
         this->cellLevel->setVisibility(brls::Visibility::GONE);
         this->cellLevelLive->setVisibility(brls::Visibility::VISIBLE);
+        this->cellMerge->setVisibility(brls::Visibility::GONE);
     } else {
         // 播放视频时，显示普通弹幕等级设置，隐藏直播弹幕等级设置
         this->cellLevel->setVisibility(brls::Visibility::VISIBLE);
         this->cellLevelLive->setVisibility(brls::Visibility::GONE);
+        this->cellMerge->setVisibility(brls::Visibility::VISIBLE);
     }
 
     std::vector<std::string> levels;

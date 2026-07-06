@@ -7,7 +7,12 @@
 #include <borealis/core/thread.hpp>
 
 #include <pystring.h>
+#include <algorithm>
+#include <cmath>
 #include <cstdlib>
+#include <deque>
+#include <fmt/core.h>
+#include <unordered_map>
 #include <utility>
 #include <lunasvg.h>
 
@@ -70,6 +75,320 @@ static inline uint64_t ntohll(uint64_t value) {
 #ifndef MAX_DANMAKU_LENGTH
 #define MAX_DANMAKU_LENGTH 4096
 #endif
+
+namespace {
+
+constexpr float DANMAKU_MERGE_THRESHOLD = 30.0f;
+constexpr int DANMAKU_MERGE_MAX_DIST     = 5;
+constexpr float DANMAKU_MERGE_MIN_COSINE = 0.45f;
+
+bool decodeUtf8(const std::string &text, std::vector<uint32_t> &out) {
+    out.clear();
+    for (size_t i = 0; i < text.size();) {
+        unsigned char c = static_cast<unsigned char>(text[i]);
+        uint32_t cp     = 0;
+        size_t extra    = 0;
+        if (c < 0x80) {
+            cp = c;
+        } else if ((c & 0xE0) == 0xC0) {
+            cp    = c & 0x1F;
+            extra = 1;
+        } else if ((c & 0xF0) == 0xE0) {
+            cp    = c & 0x0F;
+            extra = 2;
+        } else if ((c & 0xF8) == 0xF0) {
+            cp    = c & 0x07;
+            extra = 3;
+        } else {
+            return false;
+        }
+        if (i + extra >= text.size()) return false;
+        for (size_t j = 1; j <= extra; j++) {
+            unsigned char cc = static_cast<unsigned char>(text[i + j]);
+            if ((cc & 0xC0) != 0x80) return false;
+            cp = (cp << 6) | (cc & 0x3F);
+        }
+        out.emplace_back(cp);
+        i += extra + 1;
+    }
+    return true;
+}
+
+void appendUtf8(uint32_t cp, std::string &out) {
+    if (cp < 0x80) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp < 0x800) {
+        out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    } else if (cp < 0x10000) {
+        out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    } else {
+        out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    }
+}
+
+bool isSpace(uint32_t cp) { return cp == ' ' || cp == '\t' || cp == '\n' || cp == '\r' || cp == 0x3000; }
+
+bool isCjk(uint32_t cp) {
+    return (cp >= 0x3000 && cp <= 0x9FFF) || (cp >= 0xFF00 && cp <= 0xFFEF);
+}
+
+bool isEndingChar(uint32_t cp) {
+    switch (cp) {
+        case '.':
+        case 0x3002:
+        case ',':
+        case 0xFF0C:
+        case '/':
+        case '?':
+        case 0xFF1F:
+        case '!':
+        case 0xFF01:
+        case 0x2026:
+        case '~':
+        case 0xFF5E:
+        case '@':
+        case '^':
+        case 0x3001:
+        case '+':
+        case '=':
+        case '-':
+        case '_':
+        case 0x2642:
+        case 0x2640:
+            return true;
+        default:
+            return isSpace(cp);
+    }
+}
+
+uint32_t normalizeWidth(uint32_t cp) {
+    if (cp == 0x3000) return ' ';
+    if (cp >= 0xFF01 && cp <= 0xFF5E) return cp - 0xFEE0;
+    if (cp >= 'A' && cp <= 'Z') return cp + ('a' - 'A');
+    return cp;
+}
+
+std::string encodeUtf8(const std::vector<uint32_t> &chars) {
+    std::string out;
+    for (auto cp : chars) appendUtf8(cp, out);
+    return out;
+}
+
+std::string normalizeDanmakuText(const std::string &text) {
+    std::vector<uint32_t> chars;
+    if (!decodeUtf8(text, chars)) return pystring::strip(text);
+
+    size_t begin = 0;
+    size_t end   = chars.size();
+    while (begin < end && isSpace(chars[begin])) begin++;
+    while (end > begin && isSpace(chars[end - 1])) end--;
+
+    while (end > begin && isEndingChar(chars[end - 1])) end--;
+    if (begin == end) {
+        begin = 0;
+        end   = chars.size();
+    }
+
+    std::vector<uint32_t> normalized;
+    normalized.reserve(end - begin);
+    for (size_t i = begin; i < end; i++) {
+        uint32_t cp = normalizeWidth(chars[i]);
+        if (isSpace(cp)) {
+            if (normalized.empty()) continue;
+            size_t next = i + 1;
+            while (next < end && isSpace(chars[next])) next++;
+            if (next >= end) continue;
+            if (isCjk(normalized.back()) && isCjk(normalizeWidth(chars[next]))) continue;
+            if (normalized.back() != ' ') normalized.emplace_back(' ');
+            continue;
+        }
+        normalized.emplace_back(cp);
+    }
+
+    std::string out = encodeUtf8(normalized);
+    if (out.size() >= 3 && out.front() == '2' &&
+        std::all_of(out.begin() + 1, out.end(), [](char c) { return c == '3'; })) {
+        return "23333";
+    }
+    if (out.size() >= 3 && std::all_of(out.begin(), out.end(), [](char c) { return c == '6'; })) {
+        return "66666";
+    }
+    return out;
+}
+
+std::vector<uint32_t> normalizedCodepoints(const std::string &text) {
+    std::vector<uint32_t> chars;
+    decodeUtf8(text, chars);
+    return chars;
+}
+
+int multisetDistance(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b) {
+    std::unordered_map<uint32_t, int> counts;
+    counts.reserve(a.size() + b.size());
+    for (auto cp : a) counts[cp]++;
+    for (auto cp : b) counts[cp]--;
+
+    int dist = 0;
+    for (auto &item : counts) dist += std::abs(item.second);
+    return dist;
+}
+
+uint64_t bigramKey(uint32_t a, uint32_t b) { return (static_cast<uint64_t>(a) << 32) | b; }
+
+float cosineSimilarity(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b) {
+    if (a.empty() || b.empty()) return 0;
+
+    std::unordered_map<uint64_t, int> gramsA;
+    std::unordered_map<uint64_t, int> gramsB;
+    gramsA.reserve(a.size());
+    gramsB.reserve(b.size());
+
+    for (size_t i = 0; i < a.size(); i++) gramsA[bigramKey(a[i], a[(i + 1) % a.size()])]++;
+    for (size_t i = 0; i < b.size(); i++) gramsB[bigramKey(b[i], b[(i + 1) % b.size()])]++;
+
+    int dot = 0, lenA = 0, lenB = 0;
+    for (auto &item : gramsA) {
+        lenA += item.second * item.second;
+        auto it = gramsB.find(item.first);
+        if (it != gramsB.end()) dot += item.second * it->second;
+    }
+    for (auto &item : gramsB) lenB += item.second * item.second;
+    if (lenA == 0 || lenB == 0) return 0;
+    return static_cast<float>(dot) * dot / lenA / lenB;
+}
+
+bool isMergeableDanmaku(const DanmakuItem &item) {
+    if (item.type < 1 || item.type > 5) return false;
+    if (item.image != DanmakuImageType::DANMAKU_IMAGE_NONE) return false;
+    return !item.msg.empty();
+}
+
+bool isSimilarDanmaku(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b) {
+    if (a == b) return true;
+    int lenSum = static_cast<int>(a.size() + b.size());
+    int lenDiff = std::abs(static_cast<int>(a.size()) - static_cast<int>(b.size()));
+    if (lenDiff <= DANMAKU_MERGE_MAX_DIST) {
+        int dist = multisetDistance(a, b);
+        int minSize = std::max(1, DANMAKU_MERGE_MAX_DIST * 2);
+        int maxDist = lenSum < minSize ? (DANMAKU_MERGE_MAX_DIST * lenSum / minSize) : DANMAKU_MERGE_MAX_DIST;
+        if (dist <= maxDist) return true;
+    }
+    return cosineSimilarity(a, b) >= DANMAKU_MERGE_MIN_COSINE;
+}
+
+struct DanmakuMergeItem {
+    DanmakuItem item;
+    std::string normalized;
+    std::vector<uint32_t> codepoints;
+};
+
+struct DanmakuCluster {
+    std::vector<size_t> indexes;
+    float firstTime = 0;
+};
+
+std::string chooseClusterText(const std::vector<DanmakuMergeItem> &items, const DanmakuCluster &cluster) {
+    std::unordered_map<std::string, size_t> count;
+    size_t bestCount = 0;
+    std::string bestText;
+    for (auto index : cluster.indexes) {
+        const auto &text = items[index].normalized;
+        size_t current = ++count[text];
+        if (current > bestCount || (current == bestCount && text.size() < bestText.size())) {
+            bestCount = current;
+            bestText  = text;
+        }
+    }
+    return bestText.empty() ? items[cluster.indexes.front()].item.msg : bestText;
+}
+
+DanmakuItem buildClusterRepresentative(const std::vector<DanmakuMergeItem> &items, const DanmakuCluster &cluster) {
+    size_t repOffset = std::min(cluster.indexes.size() / 5, cluster.indexes.size() - 1);
+    DanmakuItem representative = items[cluster.indexes[repOffset]].item;
+    representative.msg         = chooseClusterText(items, cluster);
+
+    if (cluster.indexes.size() > 1) {
+        representative.msg += fmt::format("[x{}]", cluster.indexes.size());
+
+        for (auto index : cluster.indexes) {
+            const auto &item = items[index].item;
+            if (item.type == 4) {
+                representative.type = 4;
+            } else if (item.type == 5 && representative.type != 4) {
+                representative.type = 5;
+            }
+            if (item.fontSize > representative.fontSize && item.fontSize < 1.2f) representative.fontSize = item.fontSize;
+            if (item.level > representative.level) representative.level = item.level;
+        }
+    }
+
+    representative.isShown  = false;
+    representative.showing  = false;
+    representative.canShow  = true;
+    representative.length   = 0;
+    representative.line     = 0;
+    representative.speed    = 0;
+    representative.startTime = 0;
+    return representative;
+}
+
+std::vector<DanmakuItem> mergeDanmakuData(std::vector<DanmakuItem> data) {
+    if (data.size() < 2) return data;
+    std::sort(data.begin(), data.end());
+
+    std::vector<DanmakuMergeItem> items;
+    items.reserve(data.size());
+    for (auto &item : data) {
+        std::string normalized = isMergeableDanmaku(item) ? normalizeDanmakuText(item.msg) : "";
+        items.push_back({item, normalized, normalizedCodepoints(normalized)});
+    }
+
+    std::vector<DanmakuItem> output;
+    output.reserve(data.size());
+    std::deque<DanmakuCluster> clusters;
+
+    auto flushFront = [&]() {
+        output.emplace_back(buildClusterRepresentative(items, clusters.front()));
+        clusters.pop_front();
+    };
+
+    for (size_t i = 0; i < items.size(); i++) {
+        auto &item = items[i];
+        while (!clusters.empty() && item.item.time - clusters.front().firstTime > DANMAKU_MERGE_THRESHOLD) {
+            flushFront();
+        }
+
+        if (!isMergeableDanmaku(item.item) || item.normalized.empty()) {
+            output.emplace_back(item.item);
+            continue;
+        }
+
+        bool merged = false;
+        for (auto &cluster : clusters) {
+            const auto &first = items[cluster.indexes.front()];
+            if (isSimilarDanmaku(item.codepoints, first.codepoints)) {
+                cluster.indexes.emplace_back(i);
+                merged = true;
+                break;
+            }
+        }
+        if (!merged) {
+            clusters.push_back({{i}, item.item.time});
+        }
+    }
+
+    while (!clusters.empty()) flushFront();
+    std::sort(output.begin(), output.end());
+    return output;
+}
+
+}  // namespace
 
 DanmakuItem::DanmakuItem(std::string content, const char *attributes) : msg(std::move(content)) {
     std::vector<std::string> attrs;
@@ -289,9 +608,10 @@ void DanmakuCore::reset() {
 }
 
 void DanmakuCore::loadDanmakuData(const std::vector<DanmakuItem> &data) {
+    std::vector<DanmakuItem> normalizedData = DanmakuCore::DANMAKU_MERGE ? mergeDanmakuData(data) : data;
     danmakuMutex.lock();
-    this->danmakuData = data;
-    if (!data.empty()) danmakuLoaded = true;
+    this->danmakuData = std::move(normalizedData);
+    if (!danmakuData.empty()) danmakuLoaded = true;
     std::sort(danmakuData.begin(), danmakuData.end());
     danmakuMutex.unlock();
 
@@ -411,6 +731,7 @@ void DanmakuCore::save() {
     ProgramConfig::instance().setSettingItem(SettingItem::DANMAKU_FILTER_SCROLL, DANMAKU_FILTER_SHOW_SCROLL, false);
     ProgramConfig::instance().setSettingItem(SettingItem::DANMAKU_FILTER_COLOR, DANMAKU_FILTER_SHOW_COLOR, false);
     ProgramConfig::instance().setSettingItem(SettingItem::DANMAKU_FILTER_ADVANCED, DANMAKU_FILTER_SHOW_ADVANCED, false);
+    ProgramConfig::instance().setSettingItem(SettingItem::DANMAKU_MERGE, DANMAKU_MERGE, false);
     ProgramConfig::instance().setSettingItem(SettingItem::DANMAKU_FILTER_LEVEL, DANMAKU_FILTER_LEVEL, false);
     ProgramConfig::instance().setSettingItem(SettingItem::DANMAKU_STYLE_AREA, DANMAKU_STYLE_AREA, false);
     ProgramConfig::instance().setSettingItem(SettingItem::DANMAKU_STYLE_FONTSIZE, DANMAKU_STYLE_FONTSIZE, false);

@@ -198,6 +198,7 @@ public:
     static inline bool DANMAKU_FILTER_SHOW_SCROLL   = true;
     static inline bool DANMAKU_FILTER_SHOW_COLOR    = true;
     static inline bool DANMAKU_FILTER_SHOW_ADVANCED = false;
+    static inline bool DANMAKU_MERGE                = true;
     static inline bool DANMAKU_SMART_MASK           = true;
 
     /// [25, 50, 75, 100]

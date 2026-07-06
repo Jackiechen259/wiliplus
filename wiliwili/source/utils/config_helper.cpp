@@ -212,6 +212,7 @@ std::unordered_map<SettingItem, ProgramOption> ProgramConfig::SETTING_MAP = {
     {SettingItem::DANMAKU_FILTER_SCROLL, {"danmaku_filter_scroll", {}, {}, 1}},
     {SettingItem::DANMAKU_FILTER_COLOR, {"danmaku_filter_color", {}, {}, 1}},
     {SettingItem::DANMAKU_FILTER_ADVANCED, {"danmaku_filter_advanced", {}, {}, 0}},
+    {SettingItem::DANMAKU_MERGE, {"danmaku_merge", {}, {}, 1}},
     {SettingItem::DANMAKU_SMART_MASK, {"danmaku_smart_mask", {}, {}, 1}},
     {SettingItem::SEARCH_TV_MODE, {"search_tv_mode", {}, {}, 1}},
     {SettingItem::HTTP_PROXY_STATUS, {"http_proxy_status", {}, {}, 0}},
@@ -621,6 +622,7 @@ void ProgramConfig::load() {
     DanmakuCore::DANMAKU_FILTER_SHOW_SCROLL = getBoolOption(SettingItem::DANMAKU_FILTER_SCROLL);
     DanmakuCore::DANMAKU_FILTER_SHOW_COLOR = getBoolOption(SettingItem::DANMAKU_FILTER_COLOR);
     DanmakuCore::DANMAKU_FILTER_SHOW_ADVANCED = getBoolOption(SettingItem::DANMAKU_FILTER_ADVANCED);
+    DanmakuCore::DANMAKU_MERGE = getBoolOption(SettingItem::DANMAKU_MERGE);
     DanmakuCore::DANMAKU_FILTER_LEVEL = getIntOption(SettingItem::DANMAKU_FILTER_LEVEL);
     LiveDanmakuCore::DANMAKU_FILTER_LEVEL_LIVE = getIntOption(SettingItem::LIVE_DANMAKU_FILTER_LEVEL);
     DanmakuCore::DANMAKU_STYLE_AREA = getIntOption(SettingItem::DANMAKU_STYLE_AREA);

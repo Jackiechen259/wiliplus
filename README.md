@@ -2,10 +2,15 @@
     <img src="resources/svg/cn.xfangfang.wiliwili.svg" alt="logo" height="128" width="128"/>
 </p>
 <p align="center">
+  wiliplus —— 基于 <a href="https://github.com/xfangfang/wiliwili">wiliwili</a> 的增强改进版本
+</p>
+<p align="center">
   一个专为手柄用户设计的第三方 <a href="https://www.bilibili.com">B站</a> 客户端
 </p>
 <p align="center">
 <b><a href="#特点">特点</a></b>
+|
+<b><a href="#与-wiliwili-对比">与 wiliwili 对比</a></b>
 |
 <b><a href="#安装">安装</a></b>
 |
@@ -32,24 +37,55 @@
 [![aur](https://img.shields.io/aur/version/wiliwili?color=blue&logo=archlinux)](https://aur.archlinux.org/packages/wiliwili/)
 [![Flathub](https://img.shields.io/flathub/v/cn.xfangfang.wiliwili)](https://flathub.org/apps/cn.xfangfang.wiliwili)
 [![nightly.link](https://img.shields.io/badge/nightly.link-%E6%B5%8B%E8%AF%95%E7%89%88-green)](https://nightly.link/xfangfang/wiliwili/workflows/build.yaml/dev)
-[![layout](https://img.shields.io/badge/wiliwili-自定义布局-yellow)](https://github.com/xfangfang/wiliwili_theme)
+[![layout](https://img.shields.io/badge/wiliplus-自定义布局-yellow)](https://github.com/xfangfang/wiliwili_theme)
+
+<br>
+
+# 与 wiliwili 对比
+
+wiliplus 在 wiliwili 原有功能基础上，重点改进了以下几个方面：
+
+### 🎯 SponsorBlock 广告跳过
+- 集成 SponsorBlock，自动跳过视频内广告段落
+- 支持可配置的跳过策略（静跳过、自动跳过、仅标记等）
+- 从推荐视频中过滤广告内容
+
+### 🖼️ 播放器体验增强
+- **缩略图预览**：拖动进度条时在播放器中央显示视频缩略图
+- **全屏优化**：进入播放器时自动全屏，PC端支持窗口全屏与应用内全屏同步
+- **画面过渡优化**：视频切换时清除残留帧，避免画面闪烁
+
+### 🎨 个性化定制
+- **自定义主题色**：通过配置文件自由设定主色调，不再局限于深浅两色
+
+### 🔊 音频升级
+- 支持 **杜比全景声（Dolby Atmos）** 与 **高解析度音频（Hi-Res）**
+
+### 🔧 稳定性与 API 适配
+- 修复 Bilibili API 412 错误处理
+- 全面适配 WBI 签名认证（搜索、直播、推荐等接口）
+- 改进 Cookie 处理，符合 RFC 6265 标准
 
 <br>
 
 # 特点
 
-wiliwili 拥有非常接近官方PC客户端的B站浏览体验  
+wiliplus 拥有非常接近官方PC客户端的B站浏览体验  
 同时支持**触屏**、**鼠标**、**键盘** 与 **手柄**操控  
 无论是电脑还是游戏掌机都能获得全新的使用体验
 
-多语言：简、繁、日、韩、英 ...   
+多语言：简、繁、日、韩、英、意 ...   
 搜索页：热搜 视频 番剧 影视  
 筛选页：快速找到想看的影视内容  
 动态页：关注的UP主最近视频动态  
 直播页：关注的主播与其他系统推荐  
 播放页：视频 番剧 电影 纪录片 综艺，支持弹幕与评论  
 个人页：扫码登录 历史记录 个人收藏 我的追番 我的追剧  
-主题色：拥有深浅两色主题，跟随系统自动切换
+主题色：拥有深浅两色主题，跟随系统自动切换，支持自定义主色调  
+SponsorBlock：跳过视频内广告段落，支持可配置的跳过策略  
+缩略图预览：进度拖动时在播放器中央显示视频缩略图预览  
+全屏模式：进入播放器自动全屏，PC端支持窗口全屏与应用内全屏同步  
+杜比全景声 & 高解析度音频：支持 Dolby Atmos 和 Hi-Res 音质
 
 <br>
 
@@ -100,7 +136,7 @@ PC客户端支持切换硬件解码、秒开流畅适合老电脑、支持鼠标
 
 # 文档
 
-在各位开发者的帮助下，wiliwili 支持了一系列包管理器，同时 wiliwili 还拥有丰富的自定义选项，包括：使用 Anime4K
+在各位开发者的帮助下，wiliplus 支持了一系列包管理器，同时 wiliplus 还拥有丰富的自定义选项，包括：使用 Anime4K
 提升观感，自定义字体及图标等等  
 前往 [项目 WIKI](https://github.com/xfangfang/wiliwili/wiki) 查看更多使用技巧
 
@@ -142,6 +178,13 @@ PC客户端支持切换硬件解码、秒开流畅适合老电脑、支持鼠标
 - [x] 完善评论图片
 - [x] 评论大表情包所在行增加行高
 - [x] 支持webp图片
+- [x] WBI 签名支持（搜索、直播、推荐等接口）
+- [x] 杜比全景声 & 高解析度音频支持
+- [x] 播放器缩略图预览
+- [x] 自定义主题色
+- [x] SponsorBlock 跳过广告段落
+- [x] 视频播放过渡时清除残留帧
+- [x] 全屏模式优化（自动全屏、窗口与内全屏同步）
 - [ ] 搜索支持搜索用户
 - [ ] 长按一键三连
 - [ ] 支持个人主页
@@ -207,7 +250,7 @@ cd wiliwili
 
 ### PC本地运行
 
-目前 wiliwili 支持运行在 Linux macOS 和 Windows上
+目前 wiliplus 支持运行在 Linux macOS 和 Windows上
 
 <details>
 
@@ -318,7 +361,7 @@ docker run --rm -v $(pwd):/src/ xfangfang/wiliwili_psv_builder:latest \
 # 构建 Gxm 版 (推荐)
 docker run --rm -v $(pwd):/src/ xfangfang/wiliwili_psv_builder:latest-gxm \
     "cmake -B cmake-build-psv -G Ninja -DPLATFORM_PSV=ON \
-        -DUSE_SYSTEM_CURL=ON -DUSE_GXM=ON -DUSE_VITA_SHARK=OFF \
+        -DUSE_GXM=ON -DUSE_VITA_SHARK=OFF \
         -DCMAKE_BUILD_TYPE=Release && \
         cmake --build cmake-build-psv"
 ```
@@ -346,7 +389,7 @@ docker run --rm -v $(pwd):/src/ xfangfang/wiliwili_ps4_builder:latest \
 
 ### GLFW or SDL
 
-wiliwili 使用 nanovg 绘制图形和文字，对于创建窗口、按键触摸、输入法等支持是通过 GLFW(默认) 或 SDL 完成的。
+wiliplus 使用 nanovg 绘制图形和文字，对于创建窗口、按键触摸、输入法等支持是通过 GLFW(默认) 或 SDL 完成的。
 
 因为 GLFW 支持平台有限，在移植到新平台时可以使用 SDL 或者自行实现上述对应接口。
 
@@ -367,7 +410,7 @@ cmake --build build
 
 # Acknowledgement
 
-The development of wiliwili cannot do without the support of the following organization and open source projects.
+The development of wiliplus cannot do without the support of the following organization and open source projects.
 
 - Toolchain: devkitpro, switchbrew, vitasdk OpenOrbis and PacBrew
     - https://github.com/devkitPro
