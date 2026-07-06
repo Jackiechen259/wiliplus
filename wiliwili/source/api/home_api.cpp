@@ -241,7 +241,7 @@ void BilibiliClient::get_pgc_all_filter(const std::function<void(PGCIndexFilters
                 ERROR_MSG(r.error.message, -1);
                 return;
             } else if (r.status_code != 200) {
-                ERROR_MSG("Network error. [Status code: " + std::to_string(r.status_code) + " ]", r.status_code);
+                ERROR_MSG(HTTP::getStatusErrorMessage(Api::PGCIndexFilter, r.status_code), r.status_code);
                 return;
             }
             int ret = HTTP::parseJson<PGCIndexFilterWrapper>(

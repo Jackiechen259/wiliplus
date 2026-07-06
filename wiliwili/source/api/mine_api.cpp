@@ -81,7 +81,7 @@ void BilibiliClient::get_login_info_v2(const std::string& qrcodeKey, const std::
                       {"device_name", deviceName}},
                      false};
     // Manually set cookie, because cpr's cookie algorithm does not conform to the rfc6265
-    HTTP::HEADERS["cookie"] = HTTP::getEncodedCookie(HTTP::COOKIES);
+    HTTP::HEADERS["Cookie"] = HTTP::getEncodedCookie(HTTP::COOKIES);
 
     HTTP::_cpr_get(
         Api::QrLoginInfoV2, {{"qrcode_key", qrcodeKey}, {"source", "main_electron_pc"}},
@@ -101,7 +101,7 @@ void BilibiliClient::get_login_info_v2(const std::string& qrcodeKey, const std::
                         HTTP::COOKIES.emplace_back({cookie.GetName(), cookie.GetValue()});
                     }
                     // Manually set cookie, because cpr's cookie algorithm does not conform to the rfc6265
-                    HTTP::HEADERS["cookie"] = HTTP::getEncodedCookie(HTTP::COOKIES);
+                    HTTP::HEADERS["Cookie"] = HTTP::getEncodedCookie(HTTP::COOKIES);
                     if (BilibiliClient::writeCookiesCallback) {
                         BilibiliClient::writeCookiesCallback(cookies, data.refresh_token);
                     }

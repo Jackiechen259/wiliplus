@@ -64,11 +64,11 @@ std::string getMixinKey(const std::string& img_key, const std::string& sub_key) 
     return key;
 }
 
-void updateWbiKeys(const std::function<void()>& success, const ErrorCallback& error) {
+void updateWbiKeys(const std::function<void()>& success, const ErrorCallback& error, bool force) {
     const std::time_t now = std::time(nullptr);
 
     // 如果距离上次更新时间少于1小时，则不更新
-    if (now - g_last_update_time < 3600 && !g_mixin_key.empty()) {
+    if (!force && now - g_last_update_time < 3600 && !g_mixin_key.empty()) {
         success();
         return;
     }
@@ -76,8 +76,12 @@ void updateWbiKeys(const std::function<void()>& success, const ErrorCallback& er
     auto session = HTTP::createSession();
     session->SetUrl(cpr::Url{parseLink(Api::Nav)});
     session->GetCallback([success, error, now](const cpr::Response& r) {
+        if (r.error) {
+            ERROR_MSG(r.error.message, -1);
+            return;
+        }
         if (r.status_code != 200) {
-            ERROR_MSG("WBI签名获取失败", -412);
+            ERROR_MSG(HTTP::getStatusErrorMessage(Api::Nav, r.status_code), r.status_code);
             return;
         }
         try {

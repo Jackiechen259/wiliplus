@@ -805,11 +805,16 @@ std::string VideoView::genExtraUrlParam(int start, int end, const std::string& a
 }
 
 std::string VideoView::genExtraUrlParam(int start, int end, const std::vector<std::string>& audios) {
+    constexpr const char* BILI_USER_AGENT =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/126.0.0.0 Safari/537.36";
     std::string extra =
 #ifdef __PSV__
-        "referrer=\"https://www.bilibili.com\",network-timeout=10";
+        std::string("referrer=\"https://www.bilibili.com\",user-agent=\"") + BILI_USER_AGENT +
+        "\",http-header-fields=\"Origin: https://www.bilibili.com\",network-timeout=10";
 #else
-        "referrer=\"https://www.bilibili.com\",network-timeout=5";
+        std::string("referrer=\"https://www.bilibili.com\",user-agent=\"") + BILI_USER_AGENT +
+        "\",http-header-fields=\"Origin: https://www.bilibili.com\",network-timeout=5";
 #endif
     auto proxy = ProgramConfig::instance().getProxy();
     if (!proxy.empty()) {

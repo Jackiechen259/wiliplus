@@ -20,6 +20,9 @@ using Cookies = std::map<std::string, std::string>;
 const std::string BILIBILI_APP_KEY    = "aa1e74ee4874176e";
 const std::string BILIBILI_APP_SECRET = "54e6a9a31b911cd5fc0daa66ebf94bc4";
 const std::string BILIBILI_BUILD      = "1001011000";
+const std::string BILIBILI_WEB_USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0.0.0 Safari/537.36";
 
 using ErrorCallback = std::function<void(const std::string&, int code)>;
 #define ERROR_MSG(msg, ...) \
@@ -66,9 +69,14 @@ class HTTP {
 public:
     static inline cpr::Cookies COOKIES = {false};
     static inline cpr::Header HEADERS  = {
-        {"User-Agent", "wiliwili"},
-        {"Referer", "https://www.bilibili.com/client"},
+        {"User-Agent", BILIBILI_WEB_USER_AGENT},
+        {"Accept", "application/json, text/plain, */*"},
+        {"Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8"},
+        {"Referer", "https://www.bilibili.com/"},
         {"Origin", "https://www.bilibili.com"},
+        {"Sec-Fetch-Site", "same-site"},
+        {"Sec-Fetch-Mode", "cors"},
+        {"Sec-Fetch-Dest", "empty"},
     };
     static inline int TIMEOUT = 10000;
     static inline int CONNECTION_TIMEOUT = 0;
@@ -79,6 +87,10 @@ public:
     static inline CurlSharedObject CURL_SHARE;
 
     static std::string getEncodedCookie(const cpr::Cookies& cookies);
+
+    static std::string getStatusErrorMessage(const std::string& url, int statusCode) {
+        return "Network error. [Status code: " + std::to_string(statusCode) + " URL: " + parseLink(url) + " ]";
+    }
 
     static std::shared_ptr<cpr::Session> createSession() {
         auto session = std::make_shared<cpr::Session>();
@@ -98,17 +110,18 @@ public:
                            const std::function<void(const cpr::Response&)>& callback = nullptr,
                            const ErrorCallback& error                                = nullptr) {
         auto session = createSession();;
-        session->SetUrl(cpr::Url{parseLink(url)});
+        const std::string parsedUrl = parseLink(url);
+        session->SetUrl(cpr::Url{parsedUrl});
         session->SetParameters(parameters);
         session->SetPayload(payload);
 
         session->PostCallback(
-            [callback, error](const cpr::Response& r) {
+            [callback, error, parsedUrl](const cpr::Response& r) {
                 if (r.error) {
                     ERROR_MSG(r.error.message, -1);
                     return;
                 } else if (r.status_code != 200) {
-                    ERROR_MSG("Network error. [Status code: " + std::to_string(r.status_code) + " ]", r.status_code);
+                    ERROR_MSG(getStatusErrorMessage(parsedUrl, r.status_code), r.status_code);
                     return;
                 }
                 callback(r);
@@ -119,17 +132,18 @@ public:
                           const std::function<void(const cpr::Response&)>& callback = nullptr,
                           const ErrorCallback& error                                = nullptr) {
         auto session = createSession();;
-        session->SetUrl(cpr::Url{parseLink(url)});
+        const std::string parsedUrl = parseLink(url);
+        session->SetUrl(cpr::Url{parsedUrl});
         session->SetParameters(parameters);
 
         session->GetCallback(
-            [callback, error](const cpr::Response& r) {
+            [callback, error, parsedUrl](const cpr::Response& r) {
                 if (r.error) {
                     ERROR_MSG(r.error.message, -1);
                     return;
                 }
                 if (r.status_code != 200) {
-                    ERROR_MSG("Network error. [Status code: " + std::to_string(r.status_code) + " ]", r.status_code);
+                    ERROR_MSG(getStatusErrorMessage(parsedUrl, r.status_code), r.status_code);
                     return;
                 }
                 callback(r);
@@ -187,24 +201,44 @@ public:
     }
 
     template <typename ReturnType>
+    static void getResultWithWbiAsyncInternal(const std::string& url,
+                                              cpr::Parameters parameters,
+                                              const std::function<void(ReturnType)>& callback,
+                                              const ErrorCallback& error,
+                                              bool needSign,
+                                              bool forceWbiUpdate,
+                                              bool retryOnWbiError) {
+        wbi::updateWbiKeys([url, parameters, callback, error, needSign, retryOnWbiError]() mutable {
+            cpr::Parameters requestParameters = parameters;
+            if (needSign) {
+                signParameters(requestParameters);
+            }
+            wbi::encWbi(requestParameters);
+            ErrorCallback retryError = [url, parameters, callback, error, needSign, retryOnWbiError](
+                                           const std::string& msg, int code) {
+                if (retryOnWbiError && (code == 412 || code == -412)) {
+                    getResultWithWbiAsyncInternal<ReturnType>(url, parameters, callback, error, needSign, true, false);
+                    return;
+                }
+                ERROR_MSG(msg, code);
+            };
+            _cpr_get(
+                url,
+                requestParameters,
+                [callback, retryError](const cpr::Response& r) {
+                    parseJson<ReturnType>(r, callback, retryError);
+                },
+                retryError);
+        }, error, forceWbiUpdate);
+    }
+
+    template <typename ReturnType>
     static void getResultWithWbiAsync(const std::string& url,
                                       cpr::Parameters parameters                      = {},
                                       const std::function<void(ReturnType)>& callback = nullptr,
                                       const ErrorCallback& error                      = nullptr,
                                       bool needSign                                   = false) {
-        wbi::updateWbiKeys([url, parameters, callback, error, needSign]() mutable {
-            if (needSign) {
-                signParameters(parameters);
-            }
-            wbi::encWbi(parameters);
-            _cpr_get(
-                url,
-                parameters,
-                [callback, error](const cpr::Response& r) {
-                    parseJson<ReturnType>(r, callback, error);
-                },
-                error);
-        }, error);
+        getResultWithWbiAsyncInternal<ReturnType>(url, parameters, callback, error, needSign, false, true);
     }
 
     template <typename ReturnType>

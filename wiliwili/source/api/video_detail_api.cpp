@@ -7,8 +7,72 @@
 #include "bilibili/result/video_detail_result.h"
 #include "bilibili/result/home_live_result.h"
 #include "bilibili/result/home_pgc_season_result.h"
+#include "utils/config_helper.hpp"
+#include <memory>
+#include <utility>
 
 namespace bilibili {
+
+namespace {
+
+cpr::Parameters getVideoUrlParams(const std::string& bvid, uint64_t cid, int qn) {
+    return {{"bvid", bvid},
+            {"cid", std::to_string(cid)},
+            {"gaia_source", "view-card"},
+            {"from_client", "BROWSER"},
+            {"is_main_page", "false"},
+            {"need_fragment", "false"},
+            {"isGaiaAvoided", "true"},
+            {"voice_balance", "1"},
+            {"web_location", "1315873"},
+            {"qn", std::to_string(qn)},
+            {"fourk", "1"},
+            {"fnval", BilibiliClient::FNVAL},
+            {"fnver", "0"}};
+}
+
+cpr::Parameters getVideoUrlParams(uint64_t aid, uint64_t cid, int qn) {
+    return {{"aid", std::to_string(aid)},
+            {"cid", std::to_string(cid)},
+            {"gaia_source", "view-card"},
+            {"from_client", "BROWSER"},
+            {"is_main_page", "false"},
+            {"need_fragment", "false"},
+            {"isGaiaAvoided", "true"},
+            {"voice_balance", "1"},
+            {"web_location", "1315873"},
+            {"qn", std::to_string(qn)},
+            {"fourk", "1"},
+            {"fnval", BilibiliClient::FNVAL},
+            {"fnver", "0"}};
+}
+
+void getVideoUrlWithFallback(cpr::Parameters params,
+                             const std::function<void(VideoUrlResult)>& callback,
+                             const ErrorCallback& error) {
+    HTTP::getResultWithWbiAsync<VideoUrlResult>(
+        Api::PlayUrl2, params, callback,
+        [params, callback, error](const std::string& message, int code) {
+            if (code == 412 || code == -412) {
+                HTTP::getResultAsync<VideoUrlResult>(Api::PlayUrl, params, callback, error);
+                return;
+            }
+            ERROR_MSG(message, code);
+        });
+}
+
+void fillDefaultCard(VideoDetailAllResult& result) {
+    result.Card.like_num      = 0;
+    result.Card.follower      = 0;
+    result.Card.article_count = 0;
+    result.Card.archive_count = 0;
+    result.Card.following     = false;
+    result.Card.card.mid      = std::to_string(result.View.owner.mid);
+    result.Card.card.name     = result.View.owner.name;
+    result.Card.card.face     = result.View.owner.face;
+}
+
+}  // namespace
 
 void BilibiliClient::get_video_detail(const std::string& bvid, const std::function<void(VideoDetailResult)>& callback,
                                       const ErrorCallback& error) {
@@ -23,7 +87,41 @@ void BilibiliClient::get_video_detail(uint64_t aid, const std::function<void(Vid
 void BilibiliClient::get_video_detail_all(const std::string& bvid,
                                           const std::function<void(VideoDetailAllResult)>& callback,
                                           const ErrorCallback& error) {
-    HTTP::getResultAsync<VideoDetailAllResult>(Api::DetailAll, {{"bvid", bvid}}, callback, error);
+    HTTP::getResultAsync<VideoDetailResult>(
+        Api::Detail, {{"bvid", bvid}},
+        [callback](VideoDetailResult view) {
+            auto result  = std::make_shared<VideoDetailAllResult>();
+            result->View = std::move(view);
+            fillDefaultCard(*result);
+
+            std::function<void()> requestRelated = [result, callback]() {
+                HTTP::getResultAsync<VideoDetailListResult>(
+                    Api::DetailRelated, {{"bvid", result->View.bvid}},
+                    [result, callback](VideoDetailListResult related) {
+                        result->Related = std::move(related);
+                        HTTP_CALLBACK(*result);
+                    },
+                    [result, callback](BILI_ERR) {
+                        HTTP_CALLBACK(*result);
+                    });
+            };
+
+            if (result->View.owner.mid == 0) {
+                requestRelated();
+                return;
+            }
+
+            HTTP::getResultAsync<UserDetailResultWrapper>(
+                Api::UserCard, {{"mid", std::to_string(result->View.owner.mid)}},
+                [result, requestRelated](UserDetailResultWrapper card) {
+                    result->Card = std::move(card);
+                    requestRelated();
+                },
+                [requestRelated](BILI_ERR) {
+                    requestRelated();
+                });
+        },
+        error);
 }
 
 void BilibiliClient::get_page_detail(uint64_t aid, uint64_t cid, const std::function<void(VideoPageResult)>& callback,
@@ -57,11 +155,15 @@ void BilibiliClient::get_webmask(const std::string& url, int64_t rangeStart, int
     session->SetRange(cpr::Range{start, end});
     session->SetUrl(cpr::Url{url});
     session->GetCallback<>(
-        [callback, error](const cpr::Response& r) {
+        [callback, error, url](const cpr::Response& r) {
+            if (r.status_code != 200 && r.status_code != 206) {
+                ERROR_MSG(HTTP::getStatusErrorMessage(url, r.status_code), r.status_code);
+                return;
+            }
             try {
                 callback(r.text);
             } catch (const std::exception& e) {
-                ERROR_MSG("Network error. [Status code: " + std::to_string(r.status_code) + " ]", r.status_code);
+                ERROR_MSG(e.what(), -1);
             }
         });
 }
@@ -79,40 +181,67 @@ void BilibiliClient::get_video_pagelist(uint64_t aid, const std::function<void(V
 
 void BilibiliClient::get_video_url(const std::string& bvid, uint64_t cid, int qn,
                                    const std::function<void(VideoUrlResult)>& callback, const ErrorCallback& error) {
-    HTTP::getResultWithWbiAsync<VideoUrlResult>(Api::PlayUrl2,
-                                         {{"bvid", std::string(bvid)},
-                                          {"cid", std::to_string(cid)},
-                                          {"gaia_source", "view-card"},
-                                          {"from_client", "BROWSER"},
-                                          {"is_main_page", "false"},
-                                          {"need_fragment", "false"},
-                                          {"isGaiaAvoided", "true"},
-                                          {"voice_balance", "1"},
-                                          {"web_location", "1315873"},
-                                          {"qn", std::to_string(qn)},
-                                          {"fourk", "1"},
-                                          {"fnval", FNVAL},
-                                          {"fnver", "0"}},
-                                         callback, error);
+    getVideoUrlWithFallback(getVideoUrlParams(bvid, cid, qn), callback, error);
 }
 
 void BilibiliClient::get_video_url(uint64_t aid, uint64_t cid, int qn, const std::function<void(VideoUrlResult)>& callback,
                                    const ErrorCallback& error) {
-    HTTP::getResultWithWbiAsync<VideoUrlResult>(Api::PlayUrl2,
-                                         {{"aid", std::to_string(aid)},
-                                          {"cid", std::to_string(cid)},
-                                          {"gaia_source", "view-card"},
-                                          {"from_client", "BROWSER"},
-                                          {"is_main_page", "false"},
-                                          {"need_fragment", "false"},
-                                          {"isGaiaAvoided", "true"},
-                                          {"voice_balance", "1"},
-                                          {"web_location", "1315873"},
-                                          {"qn", std::to_string(qn)},
-                                          {"fourk", "1"},
-                                          {"fnval", FNVAL},
-                                          {"fnver", "0"}},
-                                         callback, error);
+    getVideoUrlWithFallback(getVideoUrlParams(aid, cid, qn), callback, error);
+}
+
+void BilibiliClient::get_sponsor_block_segments(const std::string& bvid, uint64_t cid,
+                                                const std::function<void(SponsorBlockSegmentListResult)>& callback,
+                                                const ErrorCallback& error) {
+    if (bvid.empty() || cid == 0) {
+        if (callback) callback({});
+        return;
+    }
+
+    std::string server =
+        ProgramConfig::instance().getSettingItem(SettingItem::SPONSOR_BLOCK_SERVER, std::string{"https://bsbsb.top"});
+    if (server.empty()) server = "https://bsbsb.top";
+    while (!server.empty() && server.back() == '/') server.pop_back();
+
+    auto session = HTTP::createSession();
+    cpr::Header headers = HTTP::HEADERS;
+    headers["Origin"] = "https://www.bilibili.com";
+    headers["x-ext-version"] = "wiliwili";
+    session->SetHeader(headers);
+    session->SetUrl(cpr::Url{server + "/api/skipSegments"});
+    session->SetParameters(cpr::Parameters{
+        {"videoID", bvid},
+        {"cid", std::to_string(cid)},
+        {"categories",
+         R"(["sponsor","selfpromo","exclusive_access","interaction","poi_highlight","intro","outro","preview","filler","music_offtopic"])"},
+        {"actionTypes", R"(["skip"])"}
+    });
+
+    session->GetCallback([callback, error](const cpr::Response& r) {
+        if (r.error) {
+            ERROR_MSG(r.error.message, -1);
+            return;
+        }
+        if (r.status_code != 200) {
+            ERROR_MSG("SponsorBlock network error. [Status code: " + std::to_string(r.status_code) + " ]",
+                      r.status_code);
+            return;
+        }
+
+        try {
+            nlohmann::json res = nlohmann::json::parse(r.text);
+            if (res.is_array()) {
+                HTTP_CALLBACK(res.get<SponsorBlockSegmentListResult>());
+            } else if (res.contains("data") && res.at("data").is_array()) {
+                HTTP_CALLBACK(res.at("data").get<SponsorBlockSegmentListResult>());
+            } else {
+                ERROR_MSG("SponsorBlock data is not an array", -1);
+            }
+        } catch (const std::exception& e) {
+            ERROR_MSG("SponsorBlock api error. \n" + std::string{e.what()}, 200);
+            printf("data: %s\n", r.text.c_str());
+            printf("ERROR: %s\n", e.what());
+        }
+    });
 }
 
 void BilibiliClient::get_video_url_cast(uint64_t oid, uint64_t cid, int type, int qn, const std::string& csrf,
@@ -299,7 +428,7 @@ void BilibiliClient::get_danmaku(uint64_t cid, const std::function<void(std::str
     session->GetCallback<>(
         [callback, error](const cpr::Response& r) {
             if (r.status_code != 200) {
-                ERROR_MSG(r.error.message, r.status_code);
+                ERROR_MSG(HTTP::getStatusErrorMessage(Api::VideoDanmaku, r.status_code), r.status_code);
                 return;
             }
             try {
@@ -319,7 +448,7 @@ void BilibiliClient::get_highlight_progress(uint64_t cid,
     session->GetCallback<>(
         [callback, error](const cpr::Response& r) {
             if (r.status_code != 200) {
-                ERROR_MSG(r.error.message, r.status_code);
+                ERROR_MSG(HTTP::getStatusErrorMessage(Api::VideoHighlight, r.status_code), r.status_code);
                 return;
             }
             try {
@@ -344,7 +473,7 @@ void BilibiliClient::get_video_snapshot(const std::string& bvid, uint64_t cid,
     session->GetCallback<>(
         [callback, error](const cpr::Response& r) {
             if (r.status_code != 200) {
-                ERROR_MSG(r.error.message, r.status_code);
+                ERROR_MSG(HTTP::getStatusErrorMessage(Api::VideoSnapshot, r.status_code), r.status_code);
                 return;
             }
             try {
@@ -365,12 +494,16 @@ void BilibiliClient::get_subtitle(const std::string& link, const std::function<v
     auto session = HTTP::createSession();
     session->SetUrl(cpr::Url{link});
     session->GetCallback<>(
-        [callback, error](const cpr::Response& r) {
+        [callback, error, link](const cpr::Response& r) {
+            if (r.status_code != 200) {
+                ERROR_MSG(HTTP::getStatusErrorMessage(link, r.status_code), r.status_code);
+                return;
+            }
             try {
                 nlohmann::json res = nlohmann::json::parse(r.text);
                 callback(res.get<SubtitleData>());
             } catch (const std::exception& e) {
-                ERROR_MSG("Network error. [Status code: " + std::to_string(r.status_code) + " ]", r.status_code);
+                ERROR_MSG(e.what(), -1);
                 printf("data: %s\n", r.text.c_str());
                 printf("ERROR: %s\n", e.what());
             }

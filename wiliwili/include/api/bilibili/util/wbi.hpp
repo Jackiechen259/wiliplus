@@ -30,7 +30,7 @@ namespace wbi {
  * @param success 成功回调函数
  * @param error 错误回调函数
  */
-void updateWbiKeys(const std::function<void()>& success, const ErrorCallback& error);
+void updateWbiKeys(const std::function<void()>& success, const ErrorCallback& error, bool force = false);
 
 /**
  * 对参数进行 WBI 签名
