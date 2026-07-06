@@ -2,6 +2,9 @@
 // Created by fang on 2023/1/3.
 //
 
+#include <algorithm>
+#include <cmath>
+#include <unordered_set>
 #include <utility>
 #include <borealis/core/thread.hpp>
 #include <borealis/core/touch/tap_gesture.hpp>
@@ -22,6 +25,29 @@
 #include "view/grid_dropdown.hpp"
 #include "view/subtitle_core.hpp"
 #include "view/mpv_core.hpp"
+
+namespace {
+
+bool sponsorBlockCategoryEnabled(const std::string& category, const bilibili::VideoUrlResult& videoUrlResult) {
+    static const std::unordered_set<std::string> categories = {
+        "sponsor",        "selfpromo", "exclusive_access", "interaction", "poi_highlight",
+        "intro",          "outro",     "preview",          "filler",      "music_offtopic",
+    };
+
+    if (!categories.count(category)) return false;
+    if ((category == "intro" || category == "outro") && BasePlayerActivity::PLAYER_SKIP_OPENING_CREDITS &&
+        (videoUrlResult.clipOpen > 0 || videoUrlResult.clipEnd > 0)) {
+        return false;
+    }
+    return true;
+}
+
+std::string sponsorBlockSegmentKey(const bilibili::SponsorBlockSegmentResult& segment) {
+    if (!segment.uuid.empty()) return segment.uuid;
+    return fmt::format("{}:{:.3f}:{:.3f}", segment.category, segment.start, segment.end);
+}
+
+}  // namespace
 
 class DataSourceCommentList : public RecyclingGridDataSource, public CommentAction {
 public:
@@ -300,6 +326,7 @@ void BasePlayerActivity::setCommonData() {
                     // 发生于向前拖拽进度的时候，此时重置lastProgress的值
                     lastProgress = MPVCore::instance().video_progress;
                 }
+                this->handleSponsorBlockProgress(MPVCore::instance().video_progress);
                 // 检查视频链接是否有效
                 auto timeNow = std::chrono::system_clock::now();
                 if (timeNow > videoDeadline) {
@@ -363,6 +390,9 @@ void BasePlayerActivity::setCommonData() {
                 break;
             case MpvEventEnum::RESTART:
                 this->updateVideoLink();
+                break;
+            case MpvEventEnum::RESET:
+                this->resetSponsorBlockSegments();
                 break;
             default:
                 break;
@@ -457,6 +487,84 @@ void BasePlayerActivity::updateVideoLink() {
         this->requestSeasonVideoUrl(episodeResult.bvid, episodeResult.cid);
     } else {
         this->requestVideoUrl(videoDetailResult.bvid, videoDetailPage.cid);
+    }
+}
+
+void BasePlayerActivity::resetSponsorBlockSegments() {
+    sponsorBlockSegments.clear();
+    skippedSponsorBlockSegments.clear();
+    sponsorBlockCid = 0;
+}
+
+void BasePlayerActivity::requestSponsorBlockSegments() {
+    resetSponsorBlockSegments();
+    if (!SPONSOR_BLOCK) return;
+
+    std::string bvid;
+    uint64_t cid = 0;
+    if (!episodeResult.bvid.empty() && episodeResult.cid != 0) {
+        bvid = episodeResult.bvid;
+        cid  = episodeResult.cid;
+    } else {
+        bvid = videoDetailResult.bvid;
+        cid  = videoDetailPage.cid;
+    }
+    if (bvid.empty() || cid == 0) return;
+
+    sponsorBlockCid = cid;
+
+    ASYNC_RETAIN
+    BILI::get_sponsor_block_segments(
+        bvid, cid,
+        [ASYNC_TOKEN, cid](const bilibili::SponsorBlockSegmentListResult& result) {
+            brls::sync([ASYNC_TOKEN, cid, result]() {
+                ASYNC_RELEASE
+                if (sponsorBlockCid != cid) return;
+
+                sponsorBlockSegments = result;
+                sponsorBlockSegments.erase(
+                    std::remove_if(sponsorBlockSegments.begin(), sponsorBlockSegments.end(),
+                                   [](const bilibili::SponsorBlockSegmentResult& segment) {
+                                       return segment.end <= segment.start || segment.end - segment.start < 1.0;
+                                   }),
+                    sponsorBlockSegments.end());
+                std::sort(sponsorBlockSegments.begin(), sponsorBlockSegments.end(),
+                          [](const bilibili::SponsorBlockSegmentResult& a,
+                             const bilibili::SponsorBlockSegmentResult& b) { return a.start < b.start; });
+
+                brls::Logger::debug("SponsorBlock: loaded {} segments for cid {}", sponsorBlockSegments.size(), cid);
+            });
+        },
+        [ASYNC_TOKEN](BILI_ERR) {
+            ASYNC_RELEASE
+            brls::Logger::debug("SponsorBlock: {}", error);
+        });
+}
+
+void BasePlayerActivity::handleSponsorBlockProgress(int64_t progress) {
+    if (!SPONSOR_BLOCK || sponsorBlockSegments.empty() || progress < 0) return;
+
+    const double current = static_cast<double>(progress);
+    for (const auto& segment : sponsorBlockSegments) {
+        if (!sponsorBlockCategoryEnabled(segment.category, videoUrlResult)) continue;
+
+        const std::string key = sponsorBlockSegmentKey(segment);
+        if (current < segment.start - 2 || current > segment.end + 2) {
+            skippedSponsorBlockSegments.erase(key);
+        }
+        if (skippedSponsorBlockSegments.count(key)) continue;
+        if (current + 1 < segment.start || current >= segment.end - 0.5) continue;
+
+        skippedSponsorBlockSegments.insert(key);
+        int64_t target = static_cast<int64_t>(std::ceil(segment.end));
+        if (MPVCore::instance().duration > 0) target = std::min(target, MPVCore::instance().duration);
+        if (target <= progress) target = progress + 1;
+
+        brls::Logger::debug("SponsorBlock: skip {} from {} to {}", segment.category, progress, target);
+        std::string hint = fmt::format("SponsorBlock: {}", segment.category);
+        APP_E->fire(VideoView::HINT, (void*)hint.c_str());
+        MPVCore::instance().seek(target);
+        break;
     }
 }
 
@@ -723,6 +831,11 @@ void BasePlayerActivity::onVideoPlayUrl(const bilibili::VideoUrlResult& result) 
     }
     // 3. 设置视频时长
     APP_E->fire(VideoView::REAL_DURATION, (void*)&time_sec);
+    if (SPONSOR_BLOCK) {
+        this->requestSponsorBlockSegments();
+    } else {
+        this->resetSponsorBlockSegments();
+    }
 
     brls::Logger::debug("BasePlayerActivity::onVideoPlayUrl done");
 

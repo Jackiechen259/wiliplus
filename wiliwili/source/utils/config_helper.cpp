@@ -168,6 +168,7 @@ std::unordered_map<SettingItem, ProgramOption> ProgramConfig::SETTING_MAP = {
     {SettingItem::SHORTCUT_VIDEO_SPEEDUP, {"shortcut_video_speedup", {}, {}, 0}},
     {SettingItem::SHORTCUT_VIDEO_OSD, {"shortcut_video_osd", {}, {}, 0}},
     {SettingItem::SHORTCUT_VIDEO_PAUSE, {"shortcut_video_pause", {}, {}, 0}},
+    {SettingItem::SPONSOR_BLOCK_SERVER, {"sponsor_block_server", {}, {}, 0}},
 
     /// bool
     {SettingItem::APP_SWAP_ABXY, {"app_swap_abxy", {}, {}, 0}},
@@ -201,6 +202,8 @@ std::unordered_map<SettingItem, ProgramOption> ProgramConfig::SETTING_MAP = {
     {SettingItem::PLAYER_EXIT_FULLSCREEN_ON_END, {"player_exit_fullscreen_on_end", {}, {}, 1}},
     {SettingItem::PLAYER_WINDOW_FULLSCREEN_ON_APP_FULLSCREEN, {"player_window_fullscreen_on_app_fullscreen", {}, {}, 0}},
     {SettingItem::PLAYER_AUTO_FULLSCREEN, {"player_auto_fullscreen", {}, {}, 0}},
+    {SettingItem::RECOMMEND_AD_FILTER, {"recommend_ad_filter", {}, {}, 0}},
+    {SettingItem::SPONSOR_BLOCK, {"sponsor_block", {}, {}, 0}},
     {SettingItem::PLAYER_OSD_TV_MODE, {"player_osd_tv_mode", {}, {}, 0}},
     {SettingItem::OPENCC_ON, {"opencc", {}, {}, 1}},
     {SettingItem::DANMAKU_ON, {"danmaku", {}, {}, 1}},
@@ -342,6 +345,19 @@ Cookie ProgramConfig::getCookie() {
     // buvid3 不应以 infoc 结尾，否则会报错误码 352
     if (!this->cookie.count("buvid3") || pystring::endswith(this->cookie["buvid3"], "infoc")) {
         this->cookie["buvid3"] = wiliwili::getRandomHex(32, false);
+    }
+    // 匿名访问 Web/WBI 接口时，B站会依赖浏览器侧设备 cookie 做风控判断
+    if (!this->cookie.count("_uuid")) {
+        this->cookie["_uuid"] = BILI::genRandomUuid();
+    }
+    if (!this->cookie.count("b_nut")) {
+        this->cookie["b_nut"] = std::to_string(wiliwili::getUnixTime());
+    }
+    if (!this->cookie.count("enable_web_push")) {
+        this->cookie["enable_web_push"] = "DISABLE";
+    }
+    if (!this->cookie.count("CURRENT_FNVAL")) {
+        this->cookie["CURRENT_FNVAL"] = BILI::FNVAL;
     }
     // 生成虚假的 DedeUserID，在未登录时使用
     // 默认用户ID (DedeUserID) 为0表示未登录，如果没有此字段老版本搜索api会报错，但目前没有这个问题，维持现状
@@ -633,6 +649,7 @@ void ProgramConfig::load() {
 
     // 是否自动跳过片头片尾
     BasePlayerActivity::PLAYER_SKIP_OPENING_CREDITS = getBoolOption(SettingItem::PLAYER_SKIP_OPENING_CREDITS);
+    BasePlayerActivity::SPONSOR_BLOCK = getBoolOption(SettingItem::SPONSOR_BLOCK);
 
     // 初始化是否固定显示底部进度条
     VideoView::BOTTOM_BAR = getBoolOption(SettingItem::PLAYER_BOTTOM_BAR);

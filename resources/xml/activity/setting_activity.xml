@@ -94,6 +94,12 @@
                             <brls:BooleanCell
                                     id="setting/video/auto_fullscreen"/>
 
+                            <brls:BooleanCell
+                                    id="setting/video/recommend_ad_filter"/>
+
+                            <brls:BooleanCell
+                                    id="setting/video/sponsor_block"/>
+
                         </brls:Box>
                     </brls:Box>
                 </brls:ScrollingFrame>

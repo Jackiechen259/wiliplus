@@ -125,6 +125,9 @@ enum class SettingItem {
     SHORTCUT_VIDEO_OSD, // 切换OSD显示
     SHORTCUT_VIDEO_PAUSE, // 视频播放暂停快捷键
     PLAYER_AUTO_FULLSCREEN, // 进入播放页后自动全屏
+    RECOMMEND_AD_FILTER, // 推荐页隐藏广告卡
+    SPONSOR_BLOCK, // 使用 SponsorBlock 跳过众包片段
+    SPONSOR_BLOCK_SERVER, // SponsorBlock 服务地址
     CUSTOM_THEME_COLOR,  // 自定义主题色 (十六进制 #RRGGBB，例如 #FF6699)
 };
 

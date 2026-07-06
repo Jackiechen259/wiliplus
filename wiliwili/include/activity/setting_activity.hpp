@@ -57,6 +57,8 @@ private:
     BRLS_BIND(brls::BooleanCell, btnHWDEC, "setting/video/hwdec");
     BRLS_BIND(brls::BooleanCell, btnAutoPlay, "setting/video/auto_play");
     BRLS_BIND(brls::BooleanCell, btnAutoFullscreen, "setting/video/auto_fullscreen");
+    BRLS_BIND(brls::BooleanCell, btnRecommendAdFilter, "setting/video/recommend_ad_filter");
+    BRLS_BIND(brls::BooleanCell, btnSponsorBlock, "setting/video/sponsor_block");
     BRLS_BIND(BiliSelectorCell, selectorInmemory, "setting/video/inmemory");
     BRLS_BIND(BiliSelectorCell, selectorFormat, "setting/video/format");
     BRLS_BIND(BiliSelectorCell, selectorCodec, "setting/video/codec");

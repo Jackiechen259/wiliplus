@@ -5,6 +5,7 @@
 #pragma once
 
 #include <chrono>
+#include <unordered_set>
 #include "presenter/video_detail.hpp"
 
 #include "view/video_comment.hpp"
@@ -104,6 +105,9 @@ public:
     // 自动跳过片头
     inline static bool PLAYER_SKIP_OPENING_CREDITS = true;
 
+    // 使用 SponsorBlock 跳过众包片段
+    inline static bool SPONSOR_BLOCK = false;
+
 protected:
     BRLS_BIND(VideoView, video, "video");
     BRLS_BIND(brls::AppletFrame, appletFrame, "video/detail/frame");
@@ -137,9 +141,15 @@ protected:
 private:
     bool activityShown = false;
     std::chrono::system_clock::time_point videoDeadline{};
+    bilibili::SponsorBlockSegmentListResult sponsorBlockSegments;
+    std::unordered_set<std::string> skippedSponsorBlockSegments;
+    uint64_t sponsorBlockCid = 0;
 
     // 重新选择当前清晰度的播放链接播放
     void updateVideoLink();
+    void requestSponsorBlockSegments();
+    void resetSponsorBlockSegments();
+    void handleSponsorBlockProgress(int64_t progress);
 };
 
 class PlayerActivity : public BasePlayerActivity {

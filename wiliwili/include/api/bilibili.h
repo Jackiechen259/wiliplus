@@ -48,6 +48,8 @@ class VideoRelation;            // 某个视频点赞收藏情况
 class VideoEpisodeRelation;     // 番剧的某一集的点赞收藏情况
 class VideoUrlResult;           // 视频播放地址
 class SeasonUrlResult;          // 番剧播放地址
+class SponsorBlockSegmentResult; // SponsorBlock 跳过片段
+typedef std::vector<SponsorBlockSegmentResult> SponsorBlockSegmentListResult;
 class VideoHighlightProgress;   // 视频高能进度条
 class VideoSnapshotData;        // 视频快照（缩略图）
 class VideoDetailPage;
@@ -310,6 +312,11 @@ public:
     static void get_video_url(const std::string& bvid, uint64_t cid, int qn = 64,
                               const std::function<void(VideoUrlResult)>& callback = nullptr,
                               const ErrorCallback& error                          = nullptr);
+
+    /// get SponsorBlock segments by bvid & cid
+    static void get_sponsor_block_segments(const std::string& bvid, uint64_t cid,
+                                           const std::function<void(SponsorBlockSegmentListResult)>& callback = nullptr,
+                                           const ErrorCallback& error = nullptr);
 
     /// get season video url by cid
     static void get_season_url(uint64_t cid, int qn = 64, const std::function<void(SeasonUrlResult)>& callback = nullptr,

@@ -551,6 +551,41 @@ inline void from_json(const nlohmann::json& nlohmann_json_j, VideoUrlResult& nlo
         NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, quality, timelength, accept_description, accept_quality));
 }
 
+class SponsorBlockSegmentResult {
+public:
+    double start = 0;
+    double end   = 0;
+    uint64_t cid = 0;
+    std::string uuid;
+    std::string category;
+    std::string actionType;
+    int votes         = 0;
+    int videoDuration = 0;
+};
+inline void from_json(const nlohmann::json& nlohmann_json_j, SponsorBlockSegmentResult& nlohmann_json_t) {
+    if (nlohmann_json_j.contains("segment") && nlohmann_json_j.at("segment").is_array() &&
+        nlohmann_json_j.at("segment").size() >= 2) {
+        nlohmann_json_t.start = nlohmann_json_j.at("segment").at(0).get<double>();
+        nlohmann_json_t.end   = nlohmann_json_j.at("segment").at(1).get<double>();
+    }
+    if (nlohmann_json_j.contains("cid") && !nlohmann_json_j.at("cid").is_null()) {
+        if (nlohmann_json_j.at("cid").is_number_unsigned() || nlohmann_json_j.at("cid").is_number_integer()) {
+            nlohmann_json_j.at("cid").get_to(nlohmann_json_t.cid);
+        } else if (nlohmann_json_j.at("cid").is_string()) {
+            try {
+                nlohmann_json_t.cid = std::stoull(nlohmann_json_j.at("cid").get<std::string>());
+            } catch (...) {
+                nlohmann_json_t.cid = 0;
+            }
+        }
+    }
+    if (nlohmann_json_j.contains("UUID") && nlohmann_json_j.at("UUID").is_string())
+        nlohmann_json_j.at("UUID").get_to(nlohmann_json_t.uuid);
+    NLOHMANN_JSON_EXPAND(
+        NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, category, actionType, votes, videoDuration));
+}
+typedef std::vector<SponsorBlockSegmentResult> SponsorBlockSegmentListResult;
+
 class SeasonUrlResult {
 public:
     VideoUrlResult video_info;

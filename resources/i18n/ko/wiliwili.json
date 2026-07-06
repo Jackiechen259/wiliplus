@@ -16,6 +16,8 @@
         "hwdec": "하드웨어 디코드",
         "auto_play": "비디오 세부 정보 페이지에서 자동 재생",
         "auto_fullscreen": "플레이어 진입 시 자동 전체 화면",
+        "recommend_ad_filter": "추천 피드 광고 카드 숨기기",
+        "sponsor_block": "SponsorBlock 구간 자동 건너뛰기",
         "exit_fullscreen": "재생 종료 시 전체 화면 종료",
         "play_strategy": "재생 방법",
         "auto_play_next_part": "자동으로 다음 동영상 재생",

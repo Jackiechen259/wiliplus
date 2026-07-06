@@ -13,6 +13,7 @@
 
 #include "bilibili.h"
 #include "activity/setting_activity.hpp"
+#include "activity/player_activity.hpp"
 #include "activity/search_activity_tv.hpp"
 #include "activity/hint_activity.hpp"
 #include "fragment/setting_network.hpp"
@@ -703,6 +704,17 @@ void SettingActivity::onContentAvailable() {
                             conf.getBoolOption(SettingItem::PLAYER_AUTO_FULLSCREEN), [](bool value) {
                                 ProgramConfig::instance().setSettingItem(SettingItem::PLAYER_AUTO_FULLSCREEN, value);
                             });
+
+    btnRecommendAdFilter->init("wiliwili/setting/app/playback/recommend_ad_filter"_i18n,
+                               conf.getBoolOption(SettingItem::RECOMMEND_AD_FILTER), [](bool value) {
+                                   ProgramConfig::instance().setSettingItem(SettingItem::RECOMMEND_AD_FILTER, value);
+                               });
+
+    btnSponsorBlock->init("wiliwili/setting/app/playback/sponsor_block"_i18n,
+                          conf.getBoolOption(SettingItem::SPONSOR_BLOCK), [](bool value) {
+                              ProgramConfig::instance().setSettingItem(SettingItem::SPONSOR_BLOCK, value);
+                              BasePlayerActivity::SPONSOR_BLOCK = value;
+                          });
 
     /// Decode quality
     btnQuality->init("wiliwili/setting/app/playback/low_quality"_i18n,
