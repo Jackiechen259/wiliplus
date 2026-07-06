@@ -635,14 +635,23 @@ void VideoView::draw(NVGcontext* vg, float x, float y, float width, float height
     // draw video
     mpvCore->draw(brls::Rect(x, y, width, height), alpha);
 
+    if (blankVideoFrame) {
+        NVGcolor bg{};
+        bg.a = alpha;
+        nvgFillColor(vg, bg);
+        nvgBeginPath(vg);
+        nvgRect(vg, x, y, width, height);
+        nvgFill(vg);
+    }
+
     // draw highlight progress
     // OSD绘制时，进度条也包含了高能进度条，避免太杂乱仅在不显示 OSD 时绘制
-    if (HIGHLIGHT_PROGRESS_BAR && (!drawOSD || is_osd_lock)) {
+    if (!blankVideoFrame && HIGHLIGHT_PROGRESS_BAR && (!drawOSD || is_osd_lock)) {
         drawHighlightProgress(vg, x, y + height, width, alpha);
     }
 
     // draw bottom bar
-    if (BOTTOM_BAR && showBottomLineSetting) {
+    if (!blankVideoFrame && BOTTOM_BAR && showBottomLineSetting) {
         bottomBarColor.a = alpha;
         float progress   = mpvCore->playback_time / getRealDuration();
         progress         = progress > 1.0f ? 1.0f : progress;
@@ -653,7 +662,7 @@ void VideoView::draw(NVGcontext* vg, float x, float y, float width, float height
     }
 
     // draw danmaku
-    if (enableDanmaku) {
+    if (!blankVideoFrame && enableDanmaku) {
         isLiveMode
             ? LiveDanmakuCore::instance().draw(vg, x, y, width, height, alpha)
             : DanmakuCore::instance().draw(vg, x, y, width, height, alpha);
@@ -670,8 +679,9 @@ void VideoView::draw(NVGcontext* vg, float x, float y, float width, float height
         if (!is_osd_lock) {
             // draw highlight progress
             auto sliderRect = osdSlider->getFrame();
-            drawHighlightProgress(vg, sliderRect.getMinX() + 30, sliderRect.getMinY() + 25, sliderRect.getWidth() - 60,
-                                  alpha);
+            if (!blankVideoFrame)
+                drawHighlightProgress(vg, sliderRect.getMinX() + 30, sliderRect.getMinY() + 25,
+                                      sliderRect.getWidth() - 60, alpha);
 
             // draw osd
             osdTopBox->setVisibility(brls::Visibility::VISIBLE);
@@ -696,7 +706,7 @@ void VideoView::draw(NVGcontext* vg, float x, float y, float width, float height
 
     // draw subtitle
     // 在正常显示 osd 时，将字幕向上偏移，避免被 OSD 挡住
-    if (showSubtitleSetting)
+    if (!blankVideoFrame && showSubtitleSetting)
         SubtitleCore::instance().drawSubtitle(vg, x, y, width, height - ((drawOSD && !is_osd_lock) ? 120.0f : 0.0f),
                                               alpha);
 
@@ -1565,19 +1575,25 @@ void VideoView::registerMpvEvent() {
                 break;
             case MpvEventEnum::MPV_RESUME:
                 this->showReplay = false;
-                this->showOSD(true);
-                this->hideLoading();
+                if (this->blankVideoFrame) {
+                    this->showOSD(false);
+                } else {
+                    this->showOSD(true);
+                    this->hideLoading();
+                }
                 break;
             case MpvEventEnum::MPV_PAUSE:
                 this->showOSD(false);
                 break;
             case MpvEventEnum::START_FILE:
+                this->blankVideoFrame = true;
                 this->showOSD(false);
                 break;
             case MpvEventEnum::LOADING_START:
                 this->showLoading();
                 break;
             case MpvEventEnum::LOADING_END:
+                this->blankVideoFrame = false;
                 this->hideLoading();
                 break;
             case MpvEventEnum::MPV_STOP:
@@ -1633,6 +1649,8 @@ void VideoView::registerMpvEvent() {
                 this->btnVolumeIcon->setImageFromSVGRes("svg/bpx-svg-sprite-volume.svg");
                 break;
             case MpvEventEnum::RESET:
+                this->blankVideoFrame = true;
+                this->showLoading();
                 // 重置进度条标记点
                 osdSlider->clearClipPoint();
                 osdSlider->clearSegments();

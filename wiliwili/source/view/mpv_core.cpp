@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <clocale>
 #include <cmath>
+#include <cstring>
 #include <pystring.h>
 #include <borealis/core/thread.hpp>
 #include <borealis/core/application.hpp>
@@ -778,6 +779,21 @@ void MPVCore::setFrameSize(brls::Rect r) {
 #endif
 }
 
+void MPVCore::clearFrame() {
+#ifdef MPV_SW_RENDER
+    if (!pixels) return;
+    std::memset(pixels, 0, sw_size[0] * sw_size[1] * PIXCEL_SIZE);
+#elif defined(MPV_USE_FB)
+    if (this->media_framebuffer == 0) return;
+    glBindFramebuffer(GL_FRAMEBUFFER, this->media_framebuffer);
+    glViewport(0, 0, this->mpv_fbo.w, this->mpv_fbo.h);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+    glViewport(0, 0, (GLsizei)brls::Application::windowWidth, (GLsizei)brls::Application::windowHeight);
+#endif
+}
+
 bool MPVCore::isValid() { return mpv_context != nullptr; }
 
 void MPVCore::draw(brls::Rect area, float alpha) {
@@ -1153,7 +1169,7 @@ void MPVCore::eventMainLoop() {
     }
 }
 
-void MPVCore::reset() {
+void MPVCore::reset(bool resetFrameSize) {
     brls::Logger::debug("MPVCore::reset");
     mpvCoreEvent.fire(MpvEventEnum::RESET);
     this->percent_pos    = 0;
@@ -1166,7 +1182,10 @@ void MPVCore::reset() {
 
     // 软硬解切换后应该手动设置一次渲染尺寸
     // 切换视频前设置渲染尺寸可以顺便将上一条视频的最后一帧画面清空
-    setFrameSize(rect);
+    if (resetFrameSize)
+        setFrameSize(rect);
+    else
+        clearFrame();
 }
 
 void MPVCore::setUrl(const std::string &url, const std::string &extra, const std::string &method) {

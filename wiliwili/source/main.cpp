@@ -56,6 +56,9 @@ int main(int argc, char* argv[]) {
     brls::Application::getPlatform()->disableScreenDimming(false);
 
     if (brls::Application::getPlatform()->isApplicationMode()) {
+        // Warm up mpv after the window and GL context exist, before the first player page is opened.
+        MPVCore::instance();
+
         Intent::openMain();
         // Uncomment these lines to debug activities
         //        Intent::openBV("BV1Da411Y7U4");  // 弹幕防遮挡 (横屏)

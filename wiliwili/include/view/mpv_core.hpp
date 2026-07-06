@@ -297,7 +297,10 @@ public:
      */
     void restart();
 
-    void reset();
+    /**
+     * Reset tracked playback state. Skipping frame resize avoids a blocking mpv render while still clearing stale frames.
+     */
+    void reset(bool resetFrameSize = true);
 
     /**
      * 设置着色器配置
@@ -502,6 +505,8 @@ private:
      * @param rect 视频区域
      */
     void setFrameSize(brls::Rect rect);
+
+    void clearFrame();
 
     /// MPV callbacks
 

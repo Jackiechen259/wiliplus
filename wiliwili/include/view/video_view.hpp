@@ -304,6 +304,7 @@ private:
     bool isTvControlMode = false;
     // 是否展示重播按钮
     bool showReplay = false;
+    bool blankVideoFrame = false;
     std::string bangumiTitle;
     unsigned int bangumiSeasonId = 0;
     MPVEvent::Subscription eventSubscribeID;

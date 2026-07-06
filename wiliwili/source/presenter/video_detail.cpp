@@ -30,7 +30,7 @@ void VideoDetail::requestData(uint64_t id, PGC_ID_TYPE type) {
 /// 获取番剧信息
 void VideoDetail::requestSeasonInfo(uint64_t seasonID, uint64_t epID) {
     // 重置MPV
-    MPVCore::instance().reset();
+    MPVCore::instance().reset(false);
 
     brls::Logger::debug("请求番剧信息 season: {}; ep: {}", seasonID, epID);
     ASYNC_RETAIN
@@ -171,7 +171,7 @@ void VideoDetail::requestSeasonStatue(uint64_t seasonID) {
 /// 获取视频信息：标题、作者、简介、分P等
 void VideoDetail::requestVideoInfo(const std::string& bvid) {
     // 重置MPV
-    MPVCore::instance().reset();
+    MPVCore::instance().reset(false);
 
     ASYNC_RETAIN
     brls::Logger::debug("请求视频信息: {}", bvid);
@@ -264,7 +264,7 @@ void VideoDetail::requestVideoInfo(const std::string& bvid) {
 /// 获取视频地址
 void VideoDetail::requestVideoUrl(const std::string& bvid, uint64_t cid, bool requestHistoryInfo) {
     // 重置MPV
-    MPVCore::instance().reset();
+    MPVCore::instance().reset(false);
     ASYNC_RETAIN
     brls::Logger::debug("请求视频播放地址: {}/{}/{}", bvid, cid, defaultQuality);
     if (cid == 0) return;
@@ -300,7 +300,7 @@ void VideoDetail::requestVideoUrl(const std::string& bvid, uint64_t cid, bool re
 /// 获取番剧地址
 void VideoDetail::requestSeasonVideoUrl(const std::string& bvid, uint64_t cid, bool requestHistoryInfo) {
     // 重置MPV
-    MPVCore::instance().reset();
+    MPVCore::instance().reset(false);
 
     ASYNC_RETAIN
     brls::Logger::debug("请求番剧视频播放地址: {}", cid);
@@ -382,7 +382,7 @@ void VideoDetail::changeEpisode(const bilibili::SeasonEpisodeResult& i) {
     this->reportHistory(i.aid, i.cid, progress, 0, 4);
 
     // 重置MPV
-    MPVCore::instance().reset();
+    MPVCore::instance().reset(false);
 
     this->onSeasonEpisodeInfo(i);
     this->requestSeasonVideoUrl(i.bvid, i.cid);
