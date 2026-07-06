@@ -113,18 +113,16 @@ void HomeRecommends::onCreate() {
 }
 
 void HomeRecommends::onRecommendVideoList(const bilibili::RecommendVideoListResultWrapper& originalResult) {
-    // 过滤up主
+    // 过滤广告卡和up主
     bilibili::RecommendVideoListResultWrapper result;
     result.requestIndex = originalResult.requestIndex;
-    result.item.resize(originalResult.item.size());
-    if (ProgramConfig::instance().upFilter.empty()) {
-        std::copy(originalResult.item.begin(), originalResult.item.end(), result.item.begin());
-    } else {
-        auto it = std::copy_if(originalResult.item.begin(), originalResult.item.end(), result.item.begin(),
-                               [](const bilibili::RecommendVideoResult& r) {
-                                   return !ProgramConfig::instance().upFilter.count(r.owner.mid);
-                               });
-        result.item.resize(std::distance(result.item.begin(), it));
+    result.item.reserve(originalResult.item.size());
+    const bool filterAd = ProgramConfig::instance().getBoolOption(SettingItem::RECOMMEND_AD_FILTER);
+    for (const auto& item : originalResult.item) {
+        if (filterAd && item.business_info.is_ad) continue;
+        if (!ProgramConfig::instance().upFilter.empty() && ProgramConfig::instance().upFilter.count(item.owner.mid))
+            continue;
+        result.item.push_back(item);
     }
 
     brls::Threading::sync([this, result]() {
