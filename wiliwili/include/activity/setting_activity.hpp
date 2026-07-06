@@ -58,7 +58,17 @@ private:
     BRLS_BIND(brls::BooleanCell, btnAutoPlay, "setting/video/auto_play");
     BRLS_BIND(brls::BooleanCell, btnAutoFullscreen, "setting/video/auto_fullscreen");
     BRLS_BIND(brls::BooleanCell, btnRecommendAdFilter, "setting/video/recommend_ad_filter");
-    BRLS_BIND(brls::BooleanCell, btnSponsorBlock, "setting/video/sponsor_block");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlock, "setting/video/sponsor_block");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockSponsor, "setting/video/sponsor_block/sponsor");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockSelfpromo, "setting/video/sponsor_block/selfpromo");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockExclusiveAccess, "setting/video/sponsor_block/exclusive_access");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockInteraction, "setting/video/sponsor_block/interaction");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockPoiHighlight, "setting/video/sponsor_block/poi_highlight");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockIntro, "setting/video/sponsor_block/intro");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockOutro, "setting/video/sponsor_block/outro");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockPreview, "setting/video/sponsor_block/preview");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockFiller, "setting/video/sponsor_block/filler");
+    BRLS_BIND(BiliSelectorCell, selectorSponsorBlockMusicOfftopic, "setting/video/sponsor_block/music_offtopic");
     BRLS_BIND(BiliSelectorCell, selectorInmemory, "setting/video/inmemory");
     BRLS_BIND(BiliSelectorCell, selectorFormat, "setting/video/format");
     BRLS_BIND(BiliSelectorCell, selectorCodec, "setting/video/codec");

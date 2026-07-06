@@ -25,21 +25,82 @@
 #include "view/grid_dropdown.hpp"
 #include "view/subtitle_core.hpp"
 #include "view/mpv_core.hpp"
+#include "view/video_progress_slider.hpp"
 
 namespace {
 
-bool sponsorBlockCategoryEnabled(const std::string& category, const bilibili::VideoUrlResult& videoUrlResult) {
-    static const std::unordered_set<std::string> categories = {
-        "sponsor",        "selfpromo", "exclusive_access", "interaction", "poi_highlight",
-        "intro",          "outro",     "preview",          "filler",      "music_offtopic",
-    };
+struct SponsorBlockCategoryConfig {
+    const char* category;
+    SettingItem setting;
+};
 
-    if (!categories.count(category)) return false;
+const std::vector<SponsorBlockCategoryConfig>& sponsorBlockCategoryConfigs() {
+    static const std::vector<SponsorBlockCategoryConfig> configs = {
+        {"sponsor", SettingItem::SPONSOR_BLOCK_SPONSOR_STRATEGY},
+        {"selfpromo", SettingItem::SPONSOR_BLOCK_SELFPROMO_STRATEGY},
+        {"exclusive_access", SettingItem::SPONSOR_BLOCK_EXCLUSIVE_ACCESS_STRATEGY},
+        {"interaction", SettingItem::SPONSOR_BLOCK_INTERACTION_STRATEGY},
+        {"poi_highlight", SettingItem::SPONSOR_BLOCK_POI_HIGHLIGHT_STRATEGY},
+        {"intro", SettingItem::SPONSOR_BLOCK_INTRO_STRATEGY},
+        {"outro", SettingItem::SPONSOR_BLOCK_OUTRO_STRATEGY},
+        {"preview", SettingItem::SPONSOR_BLOCK_PREVIEW_STRATEGY},
+        {"filler", SettingItem::SPONSOR_BLOCK_FILLER_STRATEGY},
+        {"music_offtopic", SettingItem::SPONSOR_BLOCK_MUSIC_OFFTOPIC_STRATEGY},
+    };
+    return configs;
+}
+
+const SponsorBlockCategoryConfig* sponsorBlockCategoryConfig(const std::string& category) {
+    for (const auto& config : sponsorBlockCategoryConfigs()) {
+        if (category == config.category) return &config;
+    }
+    return nullptr;
+}
+
+SponsorBlockStrategy sponsorBlockStrategyForCategory(const std::string& category) {
+    auto* config = sponsorBlockCategoryConfig(category);
+    if (!config) return SPONSOR_BLOCK_OFF;
+
+    auto& conf = ProgramConfig::instance();
+    const auto& categoryKey = ProgramConfig::SETTING_MAP[config->setting].key;
+    if (conf.setting.contains(categoryKey)) {
+        return static_cast<SponsorBlockStrategy>(conf.getSettingItem<int>(config->setting, SPONSOR_BLOCK_OFF));
+    }
+
+    const auto& defaultKey = ProgramConfig::SETTING_MAP[SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY].key;
+    if (conf.setting.contains(defaultKey)) {
+        return static_cast<SponsorBlockStrategy>(
+            conf.getSettingItem<int>(SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY, SPONSOR_BLOCK_OFF));
+    }
+
+    return conf.getBoolOption(SettingItem::SPONSOR_BLOCK) ? SPONSOR_BLOCK_AUTO_SKIP : SPONSOR_BLOCK_OFF;
+}
+
+bool sponsorBlockCanAutoSkip(const std::string& category, const bilibili::VideoUrlResult& videoUrlResult) {
+    if (sponsorBlockStrategyForCategory(category) != SPONSOR_BLOCK_AUTO_SKIP) return false;
     if ((category == "intro" || category == "outro") && BasePlayerActivity::PLAYER_SKIP_OPENING_CREDITS &&
         (videoUrlResult.clipOpen > 0 || videoUrlResult.clipEnd > 0)) {
         return false;
     }
     return true;
+}
+
+std::vector<VideoProgressSegment> sponsorBlockProgressSegments(
+    const bilibili::SponsorBlockSegmentListResult& segments, int duration) {
+    std::vector<VideoProgressSegment> result;
+    if (duration <= 0) return result;
+
+    result.reserve(segments.size());
+    for (const auto& segment : segments) {
+        if (sponsorBlockStrategyForCategory(segment.category) == SPONSOR_BLOCK_OFF) continue;
+
+        VideoProgressSegment item;
+        item.start    = static_cast<float>(segment.start / duration);
+        item.end      = static_cast<float>(segment.end / duration);
+        item.category = segment.category;
+        result.emplace_back(std::move(item));
+    }
+    return result;
 }
 
 std::string sponsorBlockSegmentKey(const bilibili::SponsorBlockSegmentResult& segment) {
@@ -222,6 +283,13 @@ private:
 };
 
 /// BasePlayerActivity
+
+bool BasePlayerActivity::hasSponsorBlockEnabledCategory() {
+    for (const auto& config : sponsorBlockCategoryConfigs()) {
+        if (sponsorBlockStrategyForCategory(config.category) != SPONSOR_BLOCK_OFF) return true;
+    }
+    return false;
+}
 
 void BasePlayerActivity::onContentAvailable() { this->setCommonData(); }
 
@@ -494,11 +562,14 @@ void BasePlayerActivity::resetSponsorBlockSegments() {
     sponsorBlockSegments.clear();
     skippedSponsorBlockSegments.clear();
     sponsorBlockCid = 0;
+
+    std::vector<VideoProgressSegment> data;
+    APP_E->fire(VideoView::SPONSOR_BLOCK_INFO, (void*)&data);
 }
 
 void BasePlayerActivity::requestSponsorBlockSegments() {
     resetSponsorBlockSegments();
-    if (!SPONSOR_BLOCK) return;
+    if (!hasSponsorBlockEnabledCategory()) return;
 
     std::string bvid;
     uint64_t cid = 0;
@@ -532,6 +603,11 @@ void BasePlayerActivity::requestSponsorBlockSegments() {
                           [](const bilibili::SponsorBlockSegmentResult& a,
                              const bilibili::SponsorBlockSegmentResult& b) { return a.start < b.start; });
 
+                int duration = videoUrlResult.timelength / 1000;
+                if (duration <= 0) duration = MPVCore::instance().duration;
+                auto progressSegments = sponsorBlockProgressSegments(sponsorBlockSegments, duration);
+                APP_E->fire(VideoView::SPONSOR_BLOCK_INFO, (void*)&progressSegments);
+
                 brls::Logger::debug("SponsorBlock: loaded {} segments for cid {}", sponsorBlockSegments.size(), cid);
             });
         },
@@ -542,11 +618,11 @@ void BasePlayerActivity::requestSponsorBlockSegments() {
 }
 
 void BasePlayerActivity::handleSponsorBlockProgress(int64_t progress) {
-    if (!SPONSOR_BLOCK || sponsorBlockSegments.empty() || progress < 0) return;
+    if (sponsorBlockSegments.empty() || progress < 0) return;
 
     const double current = static_cast<double>(progress);
     for (const auto& segment : sponsorBlockSegments) {
-        if (!sponsorBlockCategoryEnabled(segment.category, videoUrlResult)) continue;
+        if (!sponsorBlockCanAutoSkip(segment.category, videoUrlResult)) continue;
 
         const std::string key = sponsorBlockSegmentKey(segment);
         if (current < segment.start - 2 || current > segment.end + 2) {
@@ -831,7 +907,7 @@ void BasePlayerActivity::onVideoPlayUrl(const bilibili::VideoUrlResult& result) 
     }
     // 3. 设置视频时长
     APP_E->fire(VideoView::REAL_DURATION, (void*)&time_sec);
-    if (SPONSOR_BLOCK) {
+    if (hasSponsorBlockEnabledCategory()) {
         this->requestSponsorBlockSegments();
     } else {
         this->resetSponsorBlockSegments();

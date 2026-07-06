@@ -262,6 +262,20 @@ std::unordered_map<SettingItem, ProgramOption> ProgramConfig::SETTING_MAP = {
     {SettingItem::VIDEO_CODEC, {"video_codec", {"AVC/H.264", "HEVC/H.265", "AV1"}, {7, 12, 13}, 0}},
     {SettingItem::AUDIO_QUALITY,
      {"audio_quality", {"Dolby Atmos", "Hi-Res", "High", "Medium", "Low"}, {30250, 30251, 30280, 30232, 30216}, WILI_AUDIO_QUALITY_DEFAULT}},
+    {SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY, {"sponsor_block_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_SPONSOR_STRATEGY, {"sponsor_block_sponsor_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_SELFPROMO_STRATEGY, {"sponsor_block_selfpromo_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_EXCLUSIVE_ACCESS_STRATEGY,
+     {"sponsor_block_exclusive_access_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_INTERACTION_STRATEGY, {"sponsor_block_interaction_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_POI_HIGHLIGHT_STRATEGY,
+     {"sponsor_block_poi_highlight_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_INTRO_STRATEGY, {"sponsor_block_intro_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_OUTRO_STRATEGY, {"sponsor_block_outro_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_PREVIEW_STRATEGY, {"sponsor_block_preview_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_FILLER_STRATEGY, {"sponsor_block_filler_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
+    {SettingItem::SPONSOR_BLOCK_MUSIC_OFFTOPIC_STRATEGY,
+     {"sponsor_block_music_offtopic_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
     {SettingItem::DANMAKU_FILTER_LEVEL,
      {"danmaku_filter_level", {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 0}},
     {SettingItem::DANMAKU_STYLE_AREA, {"danmaku_style_area", {"1/4", "1/2", "3/4", "1"}, {25, 50, 75, 100}, 3}},
@@ -649,7 +663,7 @@ void ProgramConfig::load() {
 
     // 是否自动跳过片头片尾
     BasePlayerActivity::PLAYER_SKIP_OPENING_CREDITS = getBoolOption(SettingItem::PLAYER_SKIP_OPENING_CREDITS);
-    BasePlayerActivity::SPONSOR_BLOCK = getBoolOption(SettingItem::SPONSOR_BLOCK);
+    BasePlayerActivity::SPONSOR_BLOCK = BasePlayerActivity::hasSponsorBlockEnabledCategory();
 
     // 初始化是否固定显示底部进度条
     VideoView::BOTTOM_BAR = getBoolOption(SettingItem::PLAYER_BOTTOM_BAR);

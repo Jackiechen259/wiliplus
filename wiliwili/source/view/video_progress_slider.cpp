@@ -171,24 +171,65 @@ void VideoProgressSlider::setClipPoint(const std::vector<float>& data) { clipPoi
 
 const std::vector<float>& VideoProgressSlider::getClipPoint() { return clipPointList; }
 
+void VideoProgressSlider::setSegments(const std::vector<VideoProgressSegment>& data) { segmentList = data; }
+
+void VideoProgressSlider::clearSegments() { segmentList.clear(); }
+
+const std::vector<VideoProgressSegment>& VideoProgressSlider::getSegments() { return segmentList; }
+
+NVGcolor VideoProgressSlider::getSegmentColor(const std::string& category) const {
+    if (category == "sponsor") return nvgRGB(255, 88, 102);
+    if (category == "selfpromo") return nvgRGB(255, 153, 68);
+    if (category == "exclusive_access") return nvgRGB(175, 113, 255);
+    if (category == "interaction") return nvgRGB(72, 155, 255);
+    if (category == "poi_highlight") return nvgRGB(74, 204, 143);
+    if (category == "intro") return nvgRGB(52, 211, 235);
+    if (category == "outro") return nvgRGB(45, 184, 219);
+    if (category == "preview") return nvgRGB(255, 214, 82);
+    if (category == "filler") return nvgRGB(158, 169, 184);
+    if (category == "music_offtopic") return nvgRGB(255, 116, 185);
+    return nvgRGB(255, 255, 255);
+}
+
 void VideoProgressSlider::draw(NVGcontext* vg, float x, float y, float width, float height, brls::Style style,
                                brls::FrameContext* ctx) {
     if (pointerSelected) {
         buttonsProcessing();
     }
 
-    for (View* child : this->getChildren()) {
-        if (child == this->pointer) {
-            // draw clip point before pointer
-            nvgBeginPath(vg);
-            nvgFillColor(vg, a(nvgRGBf(1.0f, 1.0f, 1.0f)));
-            for (auto& i : clipPointList) {
-                nvgCircle(vg, x + 32 + i * (width - 64), y + height / 2, 3);
-            }
-            nvgFill(vg);
-        }
-        child->frame(ctx);
+    line->frame(ctx);
+    lineEmpty->frame(ctx);
+
+    const float lineWidth = width - pointer->getWidth();
+    const float lineX     = x + pointer->getWidth() / 2;
+    const float lineY     = y + height / 2 - line->getHeight() / 2;
+
+    for (const auto& segment : segmentList) {
+        if (segment.end <= segment.start) continue;
+
+        float start = segment.start;
+        float end   = segment.end;
+        if (start < 0) start = 0;
+        if (end > 1) end = 1;
+        if (end <= start) continue;
+
+        nvgBeginPath(vg);
+        NVGcolor color = getSegmentColor(segment.category);
+        color.a        = 0.85f * getAlpha();
+        nvgFillColor(vg, color);
+        nvgRect(vg, lineX + lineWidth * start, lineY, lineWidth * (end - start), line->getHeight());
+        nvgFill(vg);
     }
+
+    // draw clip point before pointer
+    nvgBeginPath(vg);
+    nvgFillColor(vg, a(nvgRGBf(1.0f, 1.0f, 1.0f)));
+    for (auto& i : clipPointList) {
+        nvgCircle(vg, x + pointer->getWidth() / 2 + i * lineWidth, y + height / 2, 3);
+    }
+    nvgFill(vg);
+
+    pointer->frame(ctx);
 }
 
 void VideoProgressSlider::buttonsProcessing() {

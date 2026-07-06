@@ -40,6 +40,8 @@ public:
     std::vector<float> data;
 };
 
+class VideoProgressSegment;
+
 #define VIDEO_CANCEL_SEEKING 0
 #define VIDEO_SEEK_IMMEDIATELY 0
 
@@ -203,6 +205,9 @@ public:
     // 设置高能进度条
     void setHighlightProgress(const VideoHighlightData& data);
 
+    // 设置 SponsorBlock 进度条标记
+    void setSponsorBlockSegments(const std::vector<VideoProgressSegment>& data);
+
     // 进度条上方显示提示文字
     void showHint(const std::string& value);
 
@@ -250,6 +255,7 @@ public:
     inline static const std::string REPLAY         = "REPLAY";
     inline static const std::string CLIP_INFO      = "CLIP_INFO";
     inline static const std::string HIGHLIGHT_INFO = "HIGHLIGHT_INFO";
+    inline static const std::string SPONSOR_BLOCK_INFO = "SPONSOR_BLOCK_INFO";
     inline static const std::string REAL_DURATION  = "REAL_DURATION";
 
     // 用于指定 lastPlayedPosition 的值

@@ -17,7 +17,24 @@
         "auto_play": "Auto-play on video detail page",
         "auto_fullscreen": "Auto fullscreen when entering player",
         "recommend_ad_filter": "Hide ads on recommended feed",
-        "sponsor_block": "Auto-skip SponsorBlock segments",
+        "sponsor_block": "SponsorBlock default strategy",
+        "sponsor_block_strategy": {
+          "off": "Off",
+          "mark": "Mark only",
+          "auto_skip": "Auto-skip"
+        },
+        "sponsor_block_category": {
+          "sponsor": "SponsorBlock: Sponsor",
+          "selfpromo": "SponsorBlock: Self-promotion",
+          "exclusive_access": "SponsorBlock: Exclusive access",
+          "interaction": "SponsorBlock: Interaction reminder",
+          "poi_highlight": "SponsorBlock: Highlight",
+          "intro": "SponsorBlock: Intro",
+          "outro": "SponsorBlock: Outro",
+          "preview": "SponsorBlock: Preview / recap",
+          "filler": "SponsorBlock: Filler",
+          "music_offtopic": "SponsorBlock: Non-music"
+        },
         "exit_fullscreen": "Exit full screen at the end of playback",
         "play_strategy": "Play strategy",
         "auto_play_next_part": "Automatically playing next part",

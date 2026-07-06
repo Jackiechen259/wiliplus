@@ -17,7 +17,24 @@
         "auto_fullscreen": "動画プレイヤーに入る時に自動的に全画面表示",
         "auto_play": "動画詳細ページで自動再生",
         "recommend_ad_filter": "おすすめフィードの広告カードを非表示",
-        "sponsor_block": "SponsorBlock セグメントを自動スキップ",
+        "sponsor_block": "SponsorBlock default strategy",
+        "sponsor_block_strategy": {
+          "off": "Off",
+          "mark": "Mark only",
+          "auto_skip": "Auto-skip"
+        },
+        "sponsor_block_category": {
+          "sponsor": "SponsorBlock: Sponsor",
+          "selfpromo": "SponsorBlock: Self-promotion",
+          "exclusive_access": "SponsorBlock: Exclusive access",
+          "interaction": "SponsorBlock: Interaction reminder",
+          "poi_highlight": "SponsorBlock: Highlight",
+          "intro": "SponsorBlock: Intro",
+          "outro": "SponsorBlock: Outro",
+          "preview": "SponsorBlock: Preview / recap",
+          "filler": "SponsorBlock: Filler",
+          "music_offtopic": "SponsorBlock: Non-music"
+        },
         "exit_fullscreen": "再生終了時に全画面表示を終了",
         "play_strategy": "プレイ方法",
         "auto_play_next_part": "次のパートを自動再生",

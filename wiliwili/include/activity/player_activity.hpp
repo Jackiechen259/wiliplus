@@ -29,6 +29,12 @@ enum PlayerStrategy {
     SINGLE,
 };
 
+enum SponsorBlockStrategy {
+    SPONSOR_BLOCK_OFF = 0,
+    SPONSOR_BLOCK_MARK = 1,
+    SPONSOR_BLOCK_AUTO_SKIP = 2,
+};
+
 class BasePlayerActivity : public brls::Activity, public VideoDetail {
 public:
     CONTENT_FROM_XML_RES("activity/player_activity.xml");
@@ -107,6 +113,8 @@ public:
 
     // 使用 SponsorBlock 跳过众包片段
     inline static bool SPONSOR_BLOCK = false;
+
+    static bool hasSponsorBlockEnabledCategory();
 
 protected:
     BRLS_BIND(VideoView, video, "video");

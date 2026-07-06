@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 #include <borealis/core/box.hpp>
 
@@ -15,6 +16,13 @@ namespace brls {
 class Rectangle;
 }
 class SVGImage;
+
+class VideoProgressSegment {
+public:
+    float start = 0.0f;
+    float end   = 0.0f;
+    std::string category;
+};
 
 class VideoProgressSlider : public brls::Box {
 public:
@@ -56,6 +64,12 @@ public:
 
     const std::vector<float>& getClipPoint();
 
+    void setSegments(const std::vector<VideoProgressSegment>& data);
+
+    void clearSegments();
+
+    const std::vector<VideoProgressSegment>& getSegments();
+
     void setProgressUpdater(const std::function<float(float)>& updater) { progressUpdater = updater; }
 
     void setManuallyMode();
@@ -72,6 +86,7 @@ private:
     brls::Event<> progressCancelEvent;
 
     std::vector<float> clipPointList;
+    std::vector<VideoProgressSegment> segmentList;
 
     float progress             = 1;
     bool pointerSelected       = false;
@@ -88,4 +103,5 @@ private:
     void buttonsProcessing();
     void updateUI();
     bool cancelPointerChange();
+    NVGcolor getSegmentColor(const std::string& category) const;
 };

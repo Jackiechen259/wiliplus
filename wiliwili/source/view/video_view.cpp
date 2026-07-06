@@ -521,6 +521,8 @@ VideoView::VideoView() {
             osdSlider->addClipPoint(*(float*)data);
         } else if (event == VideoView::HIGHLIGHT_INFO) {
             this->setHighlightProgress(*(VideoHighlightData*)data);
+        } else if (event == VideoView::SPONSOR_BLOCK_INFO) {
+            this->setSponsorBlockSegments(*(std::vector<VideoProgressSegment>*)data);
         } else if (event == VideoView::REPLAY) {
             // 显示重播按钮
             showReplay = true;
@@ -1202,6 +1204,10 @@ void VideoView::setHighlightProgress(const VideoHighlightData& data) {
     this->highlightData = data;
 }
 
+void VideoView::setSponsorBlockSegments(const std::vector<VideoProgressSegment>& data) {
+    this->osdSlider->setSegments(data);
+}
+
 void VideoView::showHint(const std::string& value) {
     brls::Logger::debug("Video hint: {}", value);
     this->hintLabel->setText(value);
@@ -1265,6 +1271,7 @@ void VideoView::setFullScreen(bool fs) {
         video->real_duration = real_duration;
         video->setLastPlayedPosition(lastPlayedPosition);
         video->osdSlider->setClipPoint(osdSlider->getClipPoint());
+        video->osdSlider->setSegments(osdSlider->getSegments());
         video->refreshToggleIcon();
         video->setHighlightProgress(highlightData);
         if (this->isLiveMode) video->setLiveMode();
@@ -1339,6 +1346,7 @@ void VideoView::setFullScreen(bool fs) {
                         video->real_duration = real_duration;
                         video->setLastPlayedPosition(lastPlayedPosition);
                         video->osdSlider->setClipPoint(osdSlider->getClipPoint());
+                        video->osdSlider->setSegments(osdSlider->getSegments());
                         video->setBangumiCustomSetting(this->bangumiTitle, this->bangumiSeasonId);
                         video->refreshToggleIcon();
                         video->setHighlightProgress(highlightData);
@@ -1627,6 +1635,7 @@ void VideoView::registerMpvEvent() {
             case MpvEventEnum::RESET:
                 // 重置进度条标记点
                 osdSlider->clearClipPoint();
+                osdSlider->clearSegments();
                 real_duration = 0;
                 // 重置视频快照数据
                 VideoSnapshotCore::instance().reset();
