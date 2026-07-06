@@ -51,6 +51,12 @@
         "hi_res": "Hi-Res",
         "window_fullscreen_on_app_fullscreen": "Auto window fullscreen when entering in-app fullscreen"
       },
+      "sponsor_block": {
+        "header": "SponsorBlock",
+        "server": "SponsorBlock server",
+        "server_hint": "example: https://bsbsb.top",
+        "category_header": "Category strategy"
+      },
       "image": {
         "header": "Image",
         "texture": "Number of picture texture caches",

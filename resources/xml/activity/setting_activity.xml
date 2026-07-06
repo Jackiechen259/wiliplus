@@ -97,38 +97,9 @@
                             <brls:BooleanCell
                                     id="setting/video/recommend_ad_filter"/>
 
-                            <SelectorCell
-                                    id="setting/video/sponsor_block"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/sponsor"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/selfpromo"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/exclusive_access"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/interaction"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/poi_highlight"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/intro"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/outro"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/preview"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/filler"/>
-
-                            <SelectorCell
-                                    id="setting/video/sponsor_block/music_offtopic"/>
+                            <brls:RadioCell
+                                    id="setting/video/sponsor_block_settings"
+                                    title="@i18n/wiliwili/setting/app/sponsor_block/header"/>
 
                         </brls:Box>
                     </brls:Box>

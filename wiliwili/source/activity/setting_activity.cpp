@@ -13,10 +13,10 @@
 
 #include "bilibili.h"
 #include "activity/setting_activity.hpp"
-#include "activity/player_activity.hpp"
 #include "activity/search_activity_tv.hpp"
 #include "activity/hint_activity.hpp"
 #include "fragment/setting_network.hpp"
+#include "fragment/setting_sponsor_block.hpp"
 #include "fragment/test_rumble.hpp"
 #include "utils/config_helper.hpp"
 #include "utils/vibration_helper.hpp"
@@ -36,42 +36,6 @@
 #endif
 
 using namespace brls::literals;
-
-namespace {
-
-std::vector<std::string> sponsorBlockStrategyLabels() {
-    return {
-        "wiliwili/setting/app/playback/sponsor_block_strategy/off"_i18n,
-        "wiliwili/setting/app/playback/sponsor_block_strategy/mark"_i18n,
-        "wiliwili/setting/app/playback/sponsor_block_strategy/auto_skip"_i18n,
-    };
-}
-
-int getSponsorBlockStrategySetting(SettingItem item) {
-    auto& conf = ProgramConfig::instance();
-    const auto& itemKey = ProgramConfig::SETTING_MAP[item].key;
-    if (conf.setting.contains(itemKey)) {
-        return conf.getSettingItem<int>(item, SPONSOR_BLOCK_OFF);
-    }
-
-    const auto& defaultKey = ProgramConfig::SETTING_MAP[SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY].key;
-    if (item != SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY && conf.setting.contains(defaultKey)) {
-        return conf.getSettingItem<int>(SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY, SPONSOR_BLOCK_OFF);
-    }
-
-    return conf.getBoolOption(SettingItem::SPONSOR_BLOCK) ? SPONSOR_BLOCK_AUTO_SKIP : SPONSOR_BLOCK_OFF;
-}
-
-void initSponsorBlockSelector(BiliSelectorCell* selector, const std::string& title, SettingItem item) {
-    selector->init(title, sponsorBlockStrategyLabels(), getSponsorBlockStrategySetting(item),
-                   [item](int data) {
-                       ProgramConfig::instance().setSettingItem(item, data);
-                       BasePlayerActivity::SPONSOR_BLOCK = BasePlayerActivity::hasSponsorBlockEnabledCategory();
-                       return true;
-                   });
-}
-
-}  // namespace
 
 const std::string_view OPENSOURCE =
     "--------------------------------\n"
@@ -746,38 +710,13 @@ void SettingActivity::onContentAvailable() {
                                    ProgramConfig::instance().setSettingItem(SettingItem::RECOMMEND_AD_FILTER, value);
                                });
 
-    initSponsorBlockSelector(selectorSponsorBlock, "wiliwili/setting/app/playback/sponsor_block"_i18n,
-                             SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockSponsor,
-                             "wiliwili/setting/app/playback/sponsor_block_category/sponsor"_i18n,
-                             SettingItem::SPONSOR_BLOCK_SPONSOR_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockSelfpromo,
-                             "wiliwili/setting/app/playback/sponsor_block_category/selfpromo"_i18n,
-                             SettingItem::SPONSOR_BLOCK_SELFPROMO_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockExclusiveAccess,
-                             "wiliwili/setting/app/playback/sponsor_block_category/exclusive_access"_i18n,
-                             SettingItem::SPONSOR_BLOCK_EXCLUSIVE_ACCESS_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockInteraction,
-                             "wiliwili/setting/app/playback/sponsor_block_category/interaction"_i18n,
-                             SettingItem::SPONSOR_BLOCK_INTERACTION_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockPoiHighlight,
-                             "wiliwili/setting/app/playback/sponsor_block_category/poi_highlight"_i18n,
-                             SettingItem::SPONSOR_BLOCK_POI_HIGHLIGHT_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockIntro,
-                             "wiliwili/setting/app/playback/sponsor_block_category/intro"_i18n,
-                             SettingItem::SPONSOR_BLOCK_INTRO_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockOutro,
-                             "wiliwili/setting/app/playback/sponsor_block_category/outro"_i18n,
-                             SettingItem::SPONSOR_BLOCK_OUTRO_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockPreview,
-                             "wiliwili/setting/app/playback/sponsor_block_category/preview"_i18n,
-                             SettingItem::SPONSOR_BLOCK_PREVIEW_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockFiller,
-                             "wiliwili/setting/app/playback/sponsor_block_category/filler"_i18n,
-                             SettingItem::SPONSOR_BLOCK_FILLER_STRATEGY);
-    initSponsorBlockSelector(selectorSponsorBlockMusicOfftopic,
-                             "wiliwili/setting/app/playback/sponsor_block_category/music_offtopic"_i18n,
-                             SettingItem::SPONSOR_BLOCK_MUSIC_OFFTOPIC_STRATEGY);
+    btnSponsorBlockSettings->registerClickAction([](...) -> bool {
+        auto dialog = new brls::Dialog((brls::Box*)new SettingSponsorBlock());
+        dialog->addButton("hints/ok"_i18n, []() {});
+        dialog->open();
+        return true;
+    });
+
 
     /// Decode quality
     btnQuality->init("wiliwili/setting/app/playback/low_quality"_i18n,

@@ -51,6 +51,12 @@
         "hi_res": "Hi-Res 無損",
         "window_fullscreen_on_app_fullscreen": "應用內全屏時自動切換視窗全屏"
       },
+      "sponsor_block": {
+        "header": "SponsorBlock",
+        "server": "SponsorBlock 服務地址",
+        "server_hint": "示例: https://bsbsb.top",
+        "category_header": "分類策略"
+      },
       "image": {
         "header": "圖片設定",
         "texture": "圖片紋理快取數量",

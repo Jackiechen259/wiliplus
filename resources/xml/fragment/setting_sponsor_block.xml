@@ -1,0 +1,60 @@
+<brls:Box
+        axis="column"
+        margin="40"
+        height="auto">
+    <brls:Header
+            title="@i18n/wiliwili/setting/app/sponsor_block/header"
+            marginBottom="@style/wiliwili/margin/20"/>
+    <brls:Box
+            width="100%"
+            height="auto"
+            axis="column"
+            marginBottom="30px">
+
+        <brls:InputCell
+                id="setting/sponsor_block/server"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block"/>
+
+    </brls:Box>
+    <brls:Header
+            title="@i18n/wiliwili/setting/app/sponsor_block/category_header"
+            marginBottom="@style/wiliwili/margin/20"/>
+    <brls:Box
+            width="100%"
+            height="auto"
+            axis="column">
+
+        <SelectorCell
+                id="setting/video/sponsor_block/sponsor"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/selfpromo"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/exclusive_access"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/interaction"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/poi_highlight"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/intro"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/outro"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/preview"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/filler"/>
+
+        <SelectorCell
+                id="setting/video/sponsor_block/music_offtopic"/>
+
+    </brls:Box>
+</brls:Box>

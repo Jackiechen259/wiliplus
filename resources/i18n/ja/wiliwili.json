@@ -51,6 +51,12 @@
         "dolby": "Dolby Atmos",
         "hi_res": "Hi-Res"
       },
+      "sponsor_block": {
+        "header": "SponsorBlock",
+        "server": "SponsorBlock server",
+        "server_hint": "example: https://bsbsb.top",
+        "category_header": "Category strategy"
+      },
       "image": {
         "header": "画像",
         "texture": "ピクチャテクスチャキャッシュの数",
