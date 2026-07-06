@@ -18,6 +18,9 @@ finish-args:
   - --talk-name=org.mate.SessionManager
   # control steam client
   - --filesystem=~/.steam
+build-options:
+  env:
+    PKG_CONFIG_PATH: /app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:/app/lib64/pkgconfig
 cleanup:
   - '*.a'
   - '*.la'
@@ -30,6 +33,7 @@ modules:
   - name: libplacebo
     buildsystem: meson
     config-opts:
+      - --libdir=lib
       - -Dglslang=disabled
       - -Dd3d11=disabled
       - -Ddemos=false
@@ -38,13 +42,35 @@ modules:
         url: https://github.com/haasn/libplacebo.git
         commit: cee9b076f2c63104ccfd497fa79c39a867293ec4
         tag: v7.360.1
+        disable-submodules: true
         x-checker-data:
           type: git
           tag-pattern: ^v([\d.]+)$
+      - type: git
+        url: https://github.com/Dav1dde/glad.git
+        tag: v2.0.8
+        dest: 3rdparty/glad
+      - type: git
+        url: https://github.com/pallets/jinja.git
+        tag: 3.1.6
+        dest: 3rdparty/jinja
+      - type: git
+        url: https://github.com/pallets/markupsafe.git
+        tag: 3.0.3
+        dest: 3rdparty/markupsafe
+      - type: git
+        url: https://github.com/KhronosGroup/Vulkan-Headers.git
+        tag: v1.4.337
+        dest: 3rdparty/vulkan-headers
+      - type: git
+        url: https://github.com/fastfloat/fast_float.git
+        tag: v8.2.2
+        dest: 3rdparty/fast_float
 
   - name: libmpv
     buildsystem: meson
     config-opts:
+      - --libdir=lib
       - -Dlibmpv=true
       - -Dlua=enabled
       - -Ddebug=false
@@ -79,6 +105,8 @@ modules:
         cleanup:
           - /bin
         buildsystem: meson
+        config-opts:
+          - --libdir=lib
         sources:
           - type: archive
             url: https://gitlab.freedesktop.org/emersion/libdisplay-info/-/releases/0.3.0/downloads/libdisplay-info-0.3.0.tar.xz
@@ -132,6 +160,7 @@ modules:
       - name: uchardet
         buildsystem: cmake-ninja
         config-opts:
+          - -DCMAKE_INSTALL_LIBDIR=lib
           - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           - -DCMAKE_BUILD_TYPE=Release
           - -DBUILD_STATIC=0
@@ -152,6 +181,7 @@ modules:
       - /lib/cmake
       - /lib/pkgconfig
     config-opts:
+      - -DCMAKE_INSTALL_LIBDIR=lib
       - -DPLATFORM_DESKTOP=ON
       - -DINSTALL=ON
       - -DCMAKE_BUILD_TYPE=Release
