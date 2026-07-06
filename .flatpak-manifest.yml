@@ -21,9 +21,6 @@ finish-args:
 cleanup:
   - '*.a'
   - '*.la'
-  - /include
-  - /lib/cmake
-  - /lib/pkgconfig
   - /man
   - /share/man
   - /share/gtk-doc
@@ -152,6 +149,10 @@ modules:
 
   - name: wiliwili
     buildsystem: cmake-ninja
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
     config-opts:
       - -DPLATFORM_DESKTOP=ON
       - -DINSTALL=ON
