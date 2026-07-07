@@ -85,6 +85,21 @@ bool sponsorBlockCanAutoSkip(const std::string& category, const bilibili::VideoU
     return true;
 }
 
+std::vector<std::string> mediaUrlsByCDN(const std::string& baseUrl, const std::vector<std::string>& backupUrls) {
+    std::vector<std::string> urls;
+    urls.reserve(backupUrls.size() + 1);
+    urls.emplace_back(baseUrl);
+    urls.insert(urls.end(), backupUrls.begin(), backupUrls.end());
+
+    int cdnIndex = ProgramConfig::instance().getIntOption(SettingItem::VIDEO_CDN);
+    if (cdnIndex <= 0 || urls.size() <= 1) return urls;
+
+    cdnIndex = std::min(cdnIndex, static_cast<int>(urls.size()) - 1);
+    std::rotate(urls.begin(), urls.begin() + cdnIndex, urls.begin() + cdnIndex + 1);
+    brls::Logger::debug("Prefer CDN backup url #{}", cdnIndex);
+    return urls;
+}
+
 std::vector<VideoProgressSegment> sponsorBlockProgressSegments(
     const bilibili::SponsorBlockSegmentListResult& segments, int duration) {
     std::vector<VideoProgressSegment> result;
@@ -863,17 +878,16 @@ void BasePlayerActivity::onVideoPlayUrl(const bilibili::VideoUrlResult& result) 
                 }
             }
             // 生成音频列表
-            audios.emplace_back(a.base_url);
-            audios.insert(audios.end(), a.backup_url.begin(), a.backup_url.end());
+            audios = mediaUrlsByCDN(a.base_url, a.backup_url);
             brls::Logger::debug("Dash quality: {}; video: {}; audio: {}", videoUrlResult.quality, v.codecid, a.id);
         }
 
-        // 给播放器设置链接
-        this->video->setUrl(v.base_url, start, end, audios);
-
-        // 设置备份视频链接
-        for (const auto& backup_url : v.backup_url) {
-            this->video->setBackupUrl(backup_url, start, end, audios);
+        auto videoUrls = mediaUrlsByCDN(v.base_url, v.backup_url);
+        if (!videoUrls.empty()) {
+            this->video->setUrl(videoUrls.front(), start, end, audios);
+            for (size_t i = 1; i < videoUrls.size(); i++) {
+                this->video->setBackupUrl(videoUrls[i], start, end, audios);
+            }
         }
     } else {
         // flv
@@ -881,12 +895,19 @@ void BasePlayerActivity::onVideoPlayUrl(const bilibili::VideoUrlResult& result) 
         if (result.durl.empty()) {
             brls::Logger::error("No media");
         } else if (result.durl.size() == 1) {
-            this->video->setUrl(result.durl[0].url, start, end);
+            auto urls = mediaUrlsByCDN(result.durl[0].url, result.durl[0].backup_url);
+            if (!urls.empty()) {
+                this->video->setUrl(urls.front(), start, end);
+                for (size_t i = 1; i < urls.size(); i++) {
+                    this->video->setBackupUrl(urls[i], start, end);
+                }
+            }
         } else {
             std::vector<EDLUrl> urls;
             urls.reserve(result.durl.size());
             for (auto& i : result.durl) {
-                urls.emplace_back(i.url, i.length / 1000.0f);
+                auto mediaUrls = mediaUrlsByCDN(i.url, i.backup_url);
+                urls.emplace_back(mediaUrls.front(), i.length / 1000.0f);
             }
             this->video->setUrl(urls, start, end);
         }

@@ -47,6 +47,11 @@
         "video_codec": "视频编码",
         "audio_quality": "视频音质",
         "video_format": "视频格式",
+        "video_cdn": "播放线路",
+        "cdn_auto": "默认线路",
+        "cdn_backup_1": "备用线路 1",
+        "cdn_backup_2": "备用线路 2",
+        "cdn_backup_3": "备用线路 3",
         "dolby": "杜比全景声",
         "hi_res": "Hi-Res 无损",
         "window_fullscreen_on_app_fullscreen": "应用内全屏时自动切换窗口全屏"
@@ -415,6 +420,7 @@
       "common": {
         "header": "通用",
         "mirror": "镜像画面",
+        "cdn": "播放线路",
         "highlight": "下方固定显示高能进度条",
         "skip_opening_credits": "跳过片头片尾",
         "skip_hint1": "从下一个视频开始，自动跳过片头片尾",

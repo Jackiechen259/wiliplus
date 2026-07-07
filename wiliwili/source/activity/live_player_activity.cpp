@@ -10,6 +10,7 @@
 #include "utils/number_helper.hpp"
 #include "live/dl_emoticon.hpp"
 
+#include <algorithm>
 #include <vector>
 #include <chrono>
 
@@ -370,9 +371,12 @@ void LiveActivity::onLiveData(const bilibili::LiveRoomPlayInfo &result)
             });
     }
 
-    // todo: 允许使用备用链接
-    for (const auto& i : liveUrl.url_info) {
-        auto url = i.host + liveUrl.base_url + i.extra;
+    if (!liveUrl.url_info.empty()) {
+        int cdnIndex = ProgramConfig::instance().getIntOption(SettingItem::VIDEO_CDN);
+        if (cdnIndex < 0) cdnIndex = 0;
+        cdnIndex = std::min(cdnIndex, static_cast<int>(liveUrl.url_info.size()) - 1);
+        const auto& i = liveUrl.url_info[cdnIndex];
+        auto url      = i.host + liveUrl.base_url + i.extra;
 
         // 设置视频链接
         brls::Logger::debug("Live stream url: {}", url);

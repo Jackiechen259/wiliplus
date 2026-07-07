@@ -570,6 +570,19 @@ void SettingActivity::onContentAvailable() {
             return true;
         });
 
+    /// Video CDN
+    auto cdnOption = conf.getOptionData(SettingItem::VIDEO_CDN);
+    selectorCDN->init("wiliwili/setting/app/playback/video_cdn"_i18n,
+                      {"wiliwili/setting/app/playback/cdn_auto"_i18n,
+                       "wiliwili/setting/app/playback/cdn_backup_1"_i18n,
+                       "wiliwili/setting/app/playback/cdn_backup_2"_i18n,
+                       "wiliwili/setting/app/playback/cdn_backup_3"_i18n},
+                      conf.getIntOptionIndex(SettingItem::VIDEO_CDN), [cdnOption](int data) {
+                          ProgramConfig::instance().setSettingItem(SettingItem::VIDEO_CDN,
+                                                                   cdnOption.rawOptionList[data]);
+                          return true;
+                      });
+
     /// VideoFormat
     auto formatOption = conf.getOptionData(SettingItem::VIDEO_FORMAT);
     selectorFormat->init("wiliwili/setting/app/playback/video_format"_i18n, formatOption.optionList,

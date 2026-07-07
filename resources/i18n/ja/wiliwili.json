@@ -47,6 +47,11 @@
         "video_codec": "ビデオコーデック",
         "audio_quality": "オーディオ品質",
         "video_format": "動画の形式",
+        "video_cdn": "配信ライン",
+        "cdn_auto": "デフォルトライン",
+        "cdn_backup_1": "予備ライン 1",
+        "cdn_backup_2": "予備ライン 2",
+        "cdn_backup_3": "予備ライン 3",
         "window_fullscreen_on_app_fullscreen": "アプリ内全画面時にウィンドウを全画面にする",
         "dolby": "Dolby Atmos",
         "hi_res": "Hi-Res"

@@ -47,6 +47,11 @@
         "video_codec": "비디오 코덱",
         "audio_quality": "오디오 품질",
         "video_format": "비디오 형식",
+        "video_cdn": "CDN 라인",
+        "cdn_auto": "기본 라인",
+        "cdn_backup_1": "백업 라인 1",
+        "cdn_backup_2": "백업 라인 2",
+        "cdn_backup_3": "백업 라인 3",
         "window_fullscreen_on_app_fullscreen": "앱 내 전체 화면 시 창 전체 화면 자동 전환",
         "dolby": "Dolby Atmos",
         "hi_res": "Hi-Res"

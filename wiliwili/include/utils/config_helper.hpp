@@ -70,6 +70,7 @@ enum class SettingItem {
     VIDEO_FORMAT,
     VIDEO_CODEC,
     AUDIO_QUALITY,
+    VIDEO_CDN,
     GAMEPAD_VIBRATION,
     DANMAKU_ON,
     DANMAKU_FILTER_LEVEL,

@@ -47,6 +47,11 @@
         "video_codec": "Video Codec",
         "audio_quality": "Audio Quality",
         "video_format": "Video format",
+        "video_cdn": "CDN line",
+        "cdn_auto": "Default line",
+        "cdn_backup_1": "Backup line 1",
+        "cdn_backup_2": "Backup line 2",
+        "cdn_backup_3": "Backup line 3",
         "dolby": "Dolby Atmos",
         "hi_res": "Hi-Res",
         "window_fullscreen_on_app_fullscreen": "Auto window fullscreen when entering in-app fullscreen"

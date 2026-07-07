@@ -263,6 +263,7 @@ std::unordered_map<SettingItem, ProgramOption> ProgramConfig::SETTING_MAP = {
     {SettingItem::VIDEO_CODEC, {"video_codec", {"AVC/H.264", "HEVC/H.265", "AV1"}, {7, 12, 13}, 0}},
     {SettingItem::AUDIO_QUALITY,
      {"audio_quality", {"Dolby Atmos", "Hi-Res", "High", "Medium", "Low"}, {30250, 30251, 30280, 30232, 30216}, WILI_AUDIO_QUALITY_DEFAULT}},
+    {SettingItem::VIDEO_CDN, {"video_cdn", {"auto", "backup_1", "backup_2", "backup_3"}, {0, 1, 2, 3}, 0}},
     {SettingItem::SPONSOR_BLOCK_DEFAULT_STRATEGY, {"sponsor_block_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
     {SettingItem::SPONSOR_BLOCK_SPONSOR_STRATEGY, {"sponsor_block_sponsor_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},
     {SettingItem::SPONSOR_BLOCK_SELFPROMO_STRATEGY, {"sponsor_block_selfpromo_strategy", {"off", "mark", "auto_skip"}, {0, 1, 2}, 0}},

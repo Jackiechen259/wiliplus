@@ -76,6 +76,9 @@
                             <SelectorCell
                                     id="setting/audio/quality"/>
 
+                            <SelectorCell
+                                    id="setting/video/cdn"/>
+
                         </brls:Box>
                         <brls:Header
                                 width="auto"

@@ -47,6 +47,11 @@
         "video_codec": "Codec Video",
         "audio_quality": "Qualità audio",
         "video_format": "Formato video",
+        "video_cdn": "Linea CDN",
+        "cdn_auto": "Linea predefinita",
+        "cdn_backup_1": "Linea backup 1",
+        "cdn_backup_2": "Linea backup 2",
+        "cdn_backup_3": "Linea backup 3",
         "window_fullscreen_on_app_fullscreen": "Schermo intero della finestra quando si entra in schermo intero in-app",
         "dolby": "Dolby Atmos",
         "hi_res": "Hi-Res"
