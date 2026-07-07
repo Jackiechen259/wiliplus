@@ -1277,8 +1277,9 @@ void VideoView::setFullScreen(bool fs) {
         video->showOSD(this->osd_state != OSDState::ALWAYS_ON);
         video->setFullscreenIcon(true);
         video->setHideHighlight(true);
-        video->showReplay    = showReplay;
-        video->real_duration = real_duration;
+        video->showReplay      = showReplay;
+        video->real_duration   = real_duration;
+        video->blankVideoFrame = blankVideoFrame;
         video->setLastPlayedPosition(lastPlayedPosition);
         video->osdSlider->setClipPoint(osdSlider->getClipPoint());
         video->osdSlider->setSegments(osdSlider->getSegments());
@@ -1351,9 +1352,10 @@ void VideoView::setFullScreen(bool fs) {
                         video->showOSD(this->osd_state != OSDState::ALWAYS_ON);
                         video->setDuration(this->rightStatusLabel->getFullText());
                         video->setPlaybackTime(this->leftStatusLabel->getFullText());
+                        video->blankVideoFrame = this->blankVideoFrame;
                         video->registerMpvEvent();
-                        video->showReplay    = showReplay;
-                        video->real_duration = real_duration;
+                        video->showReplay      = showReplay;
+                        video->real_duration   = real_duration;
                         video->setLastPlayedPosition(lastPlayedPosition);
                         video->osdSlider->setClipPoint(osdSlider->getClipPoint());
                         video->osdSlider->setSegments(osdSlider->getSegments());
@@ -1393,6 +1395,7 @@ void VideoView::setFullScreen(bool fs) {
                             video->showOSD(this->osd_state != OSDState::ALWAYS_ON);
                             video->setDuration(this->rightStatusLabel->getFullText());
                             video->setPlaybackTime(this->leftStatusLabel->getFullText());
+                            video->blankVideoFrame = this->blankVideoFrame;
                             video->registerMpvEvent();
                             video->refreshToggleIcon();
                             video->refreshDanmakuIcon();
@@ -1601,6 +1604,7 @@ void VideoView::registerMpvEvent() {
                 this->showOSD(false);
                 break;
             case MpvEventEnum::MPV_LOADED:
+                this->blankVideoFrame = false;
                 this->setPlaybackTime(wiliwili::sec2Time(this->mpvCore->video_progress));
                 if (lastPlayedPosition <= 0) break;
                 if (abs(getRealDuration() - lastPlayedPosition) <= 5) {
