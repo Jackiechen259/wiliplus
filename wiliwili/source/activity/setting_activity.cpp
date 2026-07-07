@@ -572,11 +572,13 @@ void SettingActivity::onContentAvailable() {
 
     /// Video CDN
     auto cdnOption = conf.getOptionData(SettingItem::VIDEO_CDN);
+    std::vector<std::string> cdnOptionList = {"wiliwili/setting/app/playback/cdn_auto"_i18n,
+                                              "wiliwili/setting/app/playback/cdn_backup_1"_i18n,
+                                              "wiliwili/setting/app/playback/cdn_backup_2"_i18n,
+                                              "wiliwili/setting/app/playback/cdn_backup_3"_i18n};
+    cdnOptionList.insert(cdnOptionList.end(), cdnOption.optionList.begin() + 4, cdnOption.optionList.end());
     selectorCDN->init("wiliwili/setting/app/playback/video_cdn"_i18n,
-                      {"wiliwili/setting/app/playback/cdn_auto"_i18n,
-                       "wiliwili/setting/app/playback/cdn_backup_1"_i18n,
-                       "wiliwili/setting/app/playback/cdn_backup_2"_i18n,
-                       "wiliwili/setting/app/playback/cdn_backup_3"_i18n},
+                      cdnOptionList,
                       conf.getIntOptionIndex(SettingItem::VIDEO_CDN), [cdnOption](int data) {
                           ProgramConfig::instance().setSettingItem(SettingItem::VIDEO_CDN,
                                                                    cdnOption.rawOptionList[data]);

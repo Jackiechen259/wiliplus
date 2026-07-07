@@ -85,6 +85,71 @@ bool sponsorBlockCanAutoSkip(const std::string& category, const bilibili::VideoU
     return true;
 }
 
+const char* cdnHostForValue(int value) {
+    switch (value) {
+        case 100:
+            return "upos-sz-mirrorali.bilivideo.com";
+        case 101:
+            return "upos-sz-mirroralib.bilivideo.com";
+        case 102:
+            return "upos-sz-mirroralio1.bilivideo.com";
+        case 103:
+            return "upos-sz-mirrorcos.bilivideo.com";
+        case 104:
+            return "upos-sz-mirrorcosb.bilivideo.com";
+        case 105:
+            return "upos-sz-mirrorcoso1.bilivideo.com";
+        case 106:
+            return "upos-sz-mirrorhw.bilivideo.com";
+        case 107:
+            return "upos-sz-mirrorhwb.bilivideo.com";
+        case 108:
+            return "upos-sz-mirrorhwo1.bilivideo.com";
+        case 109:
+            return "upos-sz-mirror08c.bilivideo.com";
+        case 110:
+            return "upos-sz-mirror08h.bilivideo.com";
+        case 111:
+            return "upos-sz-mirror08ct.bilivideo.com";
+        case 112:
+            return "upos-tf-all-hw.bilivideo.com";
+        case 113:
+            return "upos-tf-all-tx.bilivideo.com";
+        case 114:
+            return "upos-hz-mirrorakam.akamaized.net";
+        case 115:
+            return "upos-sz-mirroraliov.bilivideo.com";
+        case 116:
+            return "upos-sz-mirrorcosov.bilivideo.com";
+        case 117:
+            return "upos-sz-mirrorhwov.bilivideo.com";
+        case 118:
+            return "cn-hk-eq-bcache-01.bilivideo.com";
+        default:
+            return nullptr;
+    }
+}
+
+bool canReplaceCdnHost(const std::string& url) {
+    return url.find("/upgcxcode/") != std::string::npos;
+}
+
+std::string replaceUrlHost(const std::string& url, const std::string& host) {
+    size_t schemeEnd = url.find("://");
+    if (schemeEnd == std::string::npos) return url;
+
+    size_t hostStart = schemeEnd + 3;
+    size_t pathStart = url.find('/', hostStart);
+    if (pathStart == std::string::npos) return url.substr(0, hostStart) + host;
+    return url.substr(0, hostStart) + host + url.substr(pathStart);
+}
+
+void appendUniqueUrl(std::vector<std::string>& urls, const std::string& url) {
+    if (url.empty()) return;
+    if (std::find(urls.begin(), urls.end(), url) != urls.end()) return;
+    urls.emplace_back(url);
+}
+
 std::vector<std::string> mediaUrlsByCDN(const std::string& baseUrl, const std::vector<std::string>& backupUrls) {
     std::vector<std::string> urls;
     urls.reserve(backupUrls.size() + 1);
@@ -92,6 +157,27 @@ std::vector<std::string> mediaUrlsByCDN(const std::string& baseUrl, const std::v
     urls.insert(urls.end(), backupUrls.begin(), backupUrls.end());
 
     int cdnIndex = ProgramConfig::instance().getIntOption(SettingItem::VIDEO_CDN);
+
+    if (const char* cdnHost = cdnHostForValue(cdnIndex)) {
+        std::vector<std::string> cdnUrls;
+        cdnUrls.reserve(urls.size() + 1);
+
+        for (const auto& url : urls) {
+            if (!canReplaceCdnHost(url)) continue;
+
+            std::string cdnUrl = replaceUrlHost(url, cdnHost);
+            appendUniqueUrl(cdnUrls, cdnUrl);
+            brls::Logger::debug("Prefer CDN host: {}", cdnHost);
+            break;
+        }
+
+        for (const auto& url : urls) {
+            appendUniqueUrl(cdnUrls, url);
+        }
+
+        if (!cdnUrls.empty()) return cdnUrls;
+    }
+
     if (cdnIndex <= 0 || urls.size() <= 1) return urls;
 
     cdnIndex = std::min(cdnIndex, static_cast<int>(urls.size()) - 1);

@@ -373,14 +373,23 @@ void LiveActivity::onLiveData(const bilibili::LiveRoomPlayInfo &result)
 
     if (!liveUrl.url_info.empty()) {
         int cdnIndex = ProgramConfig::instance().getIntOption(SettingItem::VIDEO_CDN);
-        if (cdnIndex < 0) cdnIndex = 0;
+        if (cdnIndex < 0 || cdnIndex > 3) cdnIndex = 0;
         cdnIndex = std::min(cdnIndex, static_cast<int>(liveUrl.url_info.size()) - 1);
-        const auto& i = liveUrl.url_info[cdnIndex];
-        auto url      = i.host + liveUrl.base_url + i.extra;
+        std::vector<std::string> urls;
+        urls.reserve(liveUrl.url_info.size());
+        for (const auto& i : liveUrl.url_info) {
+            urls.emplace_back(i.host + liveUrl.base_url + i.extra);
+        }
+        if (cdnIndex > 0 && urls.size() > 1) {
+            std::rotate(urls.begin(), urls.begin() + cdnIndex, urls.begin() + cdnIndex + 1);
+        }
 
         // 设置视频链接
-        brls::Logger::debug("Live stream url: {}", url);
-        this->video->setUrl(url);
+        brls::Logger::debug("Live stream url: {}", urls.front());
+        this->video->setUrl(urls.front());
+        for (size_t i = 1; i < urls.size(); i++) {
+            this->video->setBackupUrl(urls[i]);
+        }
         return;
     }
 
