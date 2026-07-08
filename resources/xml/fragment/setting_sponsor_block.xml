@@ -1,60 +1,73 @@
 <brls:Box
         axis="column"
-        margin="40"
-        height="auto">
-    <brls:Header
-            title="@i18n/wiliwili/setting/app/sponsor_block/header"
-            marginBottom="@style/wiliwili/margin/20"/>
-    <brls:Box
+        width="auto"
+        height="auto"
+        margin="40">
+    <brls:ScrollingFrame
             width="100%"
-            height="auto"
-            axis="column"
-            marginBottom="30px">
+            height="500"
+            scrollingBehavior="centered">
+        <brls:Box
+                width="100%"
+                height="auto"
+                axis="column"
+                alignItems="stretch">
 
-        <brls:InputCell
-                id="setting/sponsor_block/server"/>
+            <brls:Header
+                    title="@i18n/wiliwili/setting/app/sponsor_block/header"
+                    marginBottom="@style/wiliwili/margin/20"/>
+            <brls:Box
+                    width="100%"
+                    height="auto"
+                    axis="column"
+                    marginBottom="30px">
 
-        <SelectorCell
-                id="setting/video/sponsor_block"/>
+                <brls:InputCell
+                        id="setting/sponsor_block/server"/>
 
-    </brls:Box>
-    <brls:Header
-            title="@i18n/wiliwili/setting/app/sponsor_block/category_header"
-            marginBottom="@style/wiliwili/margin/20"/>
-    <brls:Box
-            width="100%"
-            height="auto"
-            axis="column">
+                <SelectorCell
+                        id="setting/video/sponsor_block"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/sponsor"/>
+            </brls:Box>
+            <brls:Header
+                    title="@i18n/wiliwili/setting/app/sponsor_block/category_header"
+                    marginBottom="@style/wiliwili/margin/20"/>
+            <brls:Box
+                    width="100%"
+                    height="auto"
+                    axis="column">
 
-        <SelectorCell
-                id="setting/video/sponsor_block/selfpromo"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/sponsor"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/exclusive_access"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/selfpromo"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/interaction"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/exclusive_access"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/poi_highlight"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/interaction"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/intro"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/poi_highlight"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/outro"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/intro"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/preview"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/outro"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/filler"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/preview"/>
 
-        <SelectorCell
-                id="setting/video/sponsor_block/music_offtopic"/>
+                <SelectorCell
+                        id="setting/video/sponsor_block/filler"/>
 
-    </brls:Box>
+                <SelectorCell
+                        id="setting/video/sponsor_block/music_offtopic"/>
+
+            </brls:Box>
+        </brls:Box>
+    </brls:ScrollingFrame>
 </brls:Box>
