@@ -1326,24 +1326,13 @@ void VideoView::setFullScreen(bool fs) {
                 if (!dynamic_cast<VideoView*>(top->getContentView()->getView("video"))) return;
             }
 
+            bool found = false;
             // 同时点击全屏按钮和评论会导致评论弹出在 BasePlayerActivity 和 videoView 之间，
             // 因此目前需要遍历全部的 activity 找到 BasePlayerActivity 或包含VideoView的Activity
-            if (activityStack.size() <= 2) {
-                brls::Application::popActivity();
-#ifdef ALLOW_FULLSCREEN
-                // 应用内全屏退出时同步还原窗口全屏状态
-                if (WINDOW_FULLSCREEN_ON_APP_FULLSCREEN && WINDOW_FULLSCREEN_TRIGGERED) {
-                    WINDOW_FULLSCREEN_TRIGGERED = false;
-                    ProgramConfig::instance().setWindowFullscreen(false);
-                }
-#endif
-                return;
-            }
-
-            bool found = false;
-            for (size_t i = activityStack.size() - 2; i != 0; i--) {
+            for (size_t i = activityStack.size() - 1; i > 0; i--) {
+                auto* activity = activityStack[i - 1];
                 // 检查是否为BasePlayerActivity
-                auto* last = dynamic_cast<BasePlayerActivity*>(activityStack[i]);
+                auto* last = dynamic_cast<BasePlayerActivity*>(activity);
                 if (last) {
                     auto* video = dynamic_cast<VideoView*>(last->getView("video"));
                     if (video) {
@@ -1386,7 +1375,7 @@ void VideoView::setFullScreen(bool fs) {
                 } else {
                     // 如果不是BasePlayerActivity，检查是否是包含VideoView的Activity
                     // 这可能是LiveActivity或其他类型的Activity
-                    auto* contentView = activityStack[i]->getContentView();
+                    auto* contentView = activity->getContentView();
                     if (contentView) {
                         auto* video = dynamic_cast<VideoView*>(contentView->getView("video"));
                         if (video) {
