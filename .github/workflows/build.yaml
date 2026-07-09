@@ -115,6 +115,8 @@ jobs:
             ${{ needs.version.outputs.DIST_ARM_DMG }}/${{ needs.version.outputs.DIST_ARM_DMG }}.dmg
             ${{ needs.version.outputs.DIST_UNIVERSAL_DMG }}/${{ needs.version.outputs.DIST_UNIVERSAL_DMG }}.dmg
             ${{ needs.version.outputs.DIST_FLATPAK_X86_64 }}/${{ needs.version.outputs.DIST_FLATPAK_X86_64 }}.flatpak
+            ${{ needs.version.outputs.DIST_FLATPAK_AARCH64_GL }}/${{ needs.version.outputs.DIST_FLATPAK_AARCH64_GL }}.flatpak
+            ${{ needs.version.outputs.DIST_FLATPAK_AARCH64_GLES2 }}/${{ needs.version.outputs.DIST_FLATPAK_AARCH64_GLES2 }}.flatpak
 
   build-win:
     needs: [ version ]
@@ -422,23 +424,40 @@ jobs:
     strategy:
       matrix:
         include:
-          - { arch: x86_64, runner: ubuntu-24.04 }
-          - { arch: aarch64, runner: ubuntu-24.04-arm }
-        arch: [ x86_64, aarch64 ]
-        driver: [ gl, gles2 ]
-        exclude:
-          - { arch: x86_64, driver: gles2 }
+          - { arch: x86_64, runner: ubuntu-24.04, driver: gl, dist: DIST_FLATPAK_X86_64 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm, driver: gl, dist: DIST_FLATPAK_AARCH64_GL }
+          - { arch: aarch64, runner: ubuntu-24.04-arm, driver: gles2, dist: DIST_FLATPAK_AARCH64_GLES2 }
       # Don't fail the whole workflow if one architecture fails
       fail-fast: false
     runs-on: ${{ matrix.runner }}
-    env:
-      FLATPAK_NAME: wiliwili-Linux-${{ needs.version.outputs.version }}.flatpak
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
+
+      - name: Package name
+        id: package
+        run: |
+          case "${{ matrix.dist }}" in
+            DIST_FLATPAK_X86_64)
+              FLATPAK_NAME="${{ needs.version.outputs.DIST_FLATPAK_X86_64 }}"
+              ;;
+            DIST_FLATPAK_AARCH64_GL)
+              FLATPAK_NAME="${{ needs.version.outputs.DIST_FLATPAK_AARCH64_GL }}"
+              ;;
+            DIST_FLATPAK_AARCH64_GLES2)
+              FLATPAK_NAME="${{ needs.version.outputs.DIST_FLATPAK_AARCH64_GLES2 }}"
+              ;;
+            *)
+              echo "Unknown Flatpak dist: ${{ matrix.dist }}" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "name=${FLATPAK_NAME}" >> $GITHUB_OUTPUT
+          echo "bundle=${FLATPAK_NAME}.flatpak" >> $GITHUB_OUTPUT
 
       - name: Add OpenGL ES 2.0 build option
         if: matrix.driver == 'gles2'
@@ -450,22 +469,15 @@ jobs:
         run: |
           sed -i 's/BRLS_UNITY_BUILD=ON/BRLS_UNITY_BUILD=OFF/' .flatpak-manifest.yml
 
-      - name: Rename package
-        if: matrix.arch == 'aarch64'
-        run: |
-          echo "FLATPAK_NAME=wiliwili-Linux-${{ needs.version.outputs.version }}-${{ matrix.driver }}.flatpak"  >> $GITHUB_ENV
-
       - name: Install deps
-        id: dep
         run: |
           BRLS_GLFW="library/borealis/library/lib/extern/glfw/"
           cmake -P ${BRLS_GLFW}/CMake/GenerateMappings.cmake  ${BRLS_GLFW}/src/mappings.h.in  ${BRLS_GLFW}/src/mappings.h
-          echo "FLATPAK_NAME=${FLATPAK_NAME}"  >> $GITHUB_OUTPUT
-          echo ${FLATPAK_NAME}
+          echo "${{ steps.package.outputs.bundle }}"
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6.7
         with:
-          bundle: ${{ steps.dep.outputs.FLATPAK_NAME }}
+          bundle: ${{ steps.package.outputs.bundle }}
           manifest-path: .flatpak-manifest.yml
           cache-key: flatpak-builder-${{ matrix.driver }}-${{ hashFiles('.flatpak-manifest.yml') }}
           verbose: true
@@ -474,8 +486,8 @@ jobs:
 
       - uses: actions/upload-artifact@v6
         with:
-          name: wiliwili-Linux-${{ needs.version.outputs.version }}-${{ matrix.arch }}-${{ matrix.driver }}
-          path: ${{ steps.dep.outputs.FLATPAK_NAME }}
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.bundle }}
           if-no-files-found: error
 
   build-vita:
