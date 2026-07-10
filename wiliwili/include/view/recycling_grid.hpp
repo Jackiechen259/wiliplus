@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <limits>
 #include <map>
 #include <borealis/core/application.hpp>
 #include <borealis/core/bind.hpp>
@@ -200,7 +201,14 @@ private:
     // 数据为空时不请求下一页，因为有些时候首页和下一页请求的内容或方式不同
     // 当列表元素有变动时（添加或修改数据源，会重置为false，这是将允许请求下一页）
 
-    uint32_t visibleMin, visibleMax;
+    uint32_t visibleMin = std::numeric_limits<uint32_t>::max();
+    uint32_t visibleMax = 0;
+
+    bool recyclingDirty       = true;
+    float lastVisibleMinY     = 0;
+    float lastVisibleMaxY     = 0;
+    size_t lastItemCount      = 0;
+    size_t knownDataItemCount = 0;
     size_t defaultCellFocus = 0;
 
     float paddingTop    = 0;

@@ -476,10 +476,12 @@ void VideoDetail::requestVideoRelationInfo(uint64_t epid) {
 /// 获取视频弹幕
 void VideoDetail::requestVideoDanmaku(uint64_t cid) {
     brls::Logger::debug("请求弹幕：cid: {}", cid);
+    const uint64_t danmakuRequest = DanmakuCore::instance().beginDanmakuRequest();
+    const bool mergeDanmaku       = DanmakuCore::DANMAKU_MERGE;
     ASYNC_RETAIN
     BILI::get_danmaku(
         cid,
-        [ASYNC_TOKEN](const std::string& result) {
+        [ASYNC_TOKEN, danmakuRequest, mergeDanmaku](const std::string& result) {
             ASYNC_RELEASE
             brls::Logger::debug("DANMAKU: start decode");
 
@@ -509,9 +511,13 @@ void VideoDetail::requestVideoDanmaku(uint64_t cid) {
                 }
             }
 
-            brls::sync([items]() { DanmakuCore::instance().loadDanmakuData(items); });
+            const size_t itemCount = items.size();
+            items = DanmakuCore::prepareDanmakuData(std::move(items), mergeDanmaku);
+            brls::sync([items = std::move(items), danmakuRequest]() mutable {
+                DanmakuCore::instance().loadDanmakuData(std::move(items), danmakuRequest);
+            });
 
-            brls::Logger::debug("DANMAKU: decode done: {}", items.size());
+            brls::Logger::debug("DANMAKU: decode done: {}", itemCount);
         },
         [ASYNC_TOKEN](BILI_ERR) {
             ASYNC_RELEASE

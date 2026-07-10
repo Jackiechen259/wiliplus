@@ -228,39 +228,50 @@ std::vector<uint32_t> normalizedCodepoints(const std::string &text) {
     return chars;
 }
 
-int multisetDistance(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b) {
-    std::unordered_map<uint32_t, int> counts;
-    counts.reserve(a.size() + b.size());
-    for (auto cp : a) counts[cp]++;
-    for (auto cp : b) counts[cp]--;
+uint64_t bigramKey(uint32_t a, uint32_t b) { return (static_cast<uint64_t>(a) << 32) | b; }
 
+struct DanmakuTextFeatures {
+    std::unordered_map<uint32_t, int> chars;
+    std::unordered_map<uint64_t, int> bigrams;
+    int64_t bigramNorm = 0;
+};
+
+DanmakuTextFeatures buildTextFeatures(const std::vector<uint32_t> &text) {
+    DanmakuTextFeatures features;
+    features.chars.reserve(text.size());
+    features.bigrams.reserve(text.size());
+
+    for (auto cp : text) features.chars[cp]++;
+    for (size_t i = 0; i < text.size(); i++) {
+        features.bigrams[bigramKey(text[i], text[(i + 1) % text.size()])]++;
+    }
+    for (const auto &item : features.bigrams) {
+        features.bigramNorm += static_cast<int64_t>(item.second) * item.second;
+    }
+    return features;
+}
+
+int multisetDistance(const DanmakuTextFeatures &a, const DanmakuTextFeatures &b) {
     int dist = 0;
-    for (auto &item : counts) dist += std::abs(item.second);
+    for (const auto &item : a.chars) {
+        auto it = b.chars.find(item.first);
+        dist += std::abs(item.second - (it == b.chars.end() ? 0 : it->second));
+    }
+    for (const auto &item : b.chars) {
+        if (a.chars.find(item.first) == a.chars.end()) dist += item.second;
+    }
     return dist;
 }
 
-uint64_t bigramKey(uint32_t a, uint32_t b) { return (static_cast<uint64_t>(a) << 32) | b; }
+float cosineSimilarity(const DanmakuTextFeatures &a, const DanmakuTextFeatures &b) {
+    if (a.bigramNorm == 0 || b.bigramNorm == 0) return 0;
 
-float cosineSimilarity(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b) {
-    if (a.empty() || b.empty()) return 0;
-
-    std::unordered_map<uint64_t, int> gramsA;
-    std::unordered_map<uint64_t, int> gramsB;
-    gramsA.reserve(a.size());
-    gramsB.reserve(b.size());
-
-    for (size_t i = 0; i < a.size(); i++) gramsA[bigramKey(a[i], a[(i + 1) % a.size()])]++;
-    for (size_t i = 0; i < b.size(); i++) gramsB[bigramKey(b[i], b[(i + 1) % b.size()])]++;
-
-    int dot = 0, lenA = 0, lenB = 0;
-    for (auto &item : gramsA) {
-        lenA += item.second * item.second;
-        auto it = gramsB.find(item.first);
-        if (it != gramsB.end()) dot += item.second * it->second;
+    int64_t dot = 0;
+    for (const auto &item : a.bigrams) {
+        auto it = b.bigrams.find(item.first);
+        if (it != b.bigrams.end()) dot += static_cast<int64_t>(item.second) * it->second;
     }
-    for (auto &item : gramsB) lenB += item.second * item.second;
-    if (lenA == 0 || lenB == 0) return 0;
-    return static_cast<float>(dot) * dot / lenA / lenB;
+    return static_cast<float>(dot) * dot / a.bigramNorm / b.bigramNorm;
 }
 
 bool isMergeableDanmaku(const DanmakuItem &item) {
@@ -269,23 +280,25 @@ bool isMergeableDanmaku(const DanmakuItem &item) {
     return !item.msg.empty();
 }
 
-bool isSimilarDanmaku(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b) {
+bool isSimilarDanmaku(const std::vector<uint32_t> &a, const std::vector<uint32_t> &b,
+                      const DanmakuTextFeatures &featuresA, const DanmakuTextFeatures &featuresB) {
     if (a == b) return true;
     int lenSum = static_cast<int>(a.size() + b.size());
     int lenDiff = std::abs(static_cast<int>(a.size()) - static_cast<int>(b.size()));
     if (lenDiff <= DANMAKU_MERGE_MAX_DIST) {
-        int dist = multisetDistance(a, b);
+        int dist = multisetDistance(featuresA, featuresB);
         int minSize = std::max(1, DANMAKU_MERGE_MAX_DIST * 2);
         int maxDist = lenSum < minSize ? (DANMAKU_MERGE_MAX_DIST * lenSum / minSize) : DANMAKU_MERGE_MAX_DIST;
         if (dist <= maxDist) return true;
     }
-    return cosineSimilarity(a, b) >= DANMAKU_MERGE_MIN_COSINE;
+    return cosineSimilarity(featuresA, featuresB) >= DANMAKU_MERGE_MIN_COSINE;
 }
 
 struct DanmakuMergeItem {
     DanmakuItem item;
     std::string normalized;
     std::vector<uint32_t> codepoints;
+    DanmakuTextFeatures features;
 };
 
 struct DanmakuCluster {
@@ -346,7 +359,10 @@ std::vector<DanmakuItem> mergeDanmakuData(std::vector<DanmakuItem> data) {
     items.reserve(data.size());
     for (auto &item : data) {
         std::string normalized = isMergeableDanmaku(item) ? normalizeDanmakuText(item.msg) : "";
-        items.push_back({item, normalized, normalizedCodepoints(normalized)});
+        auto codepoints        = normalizedCodepoints(normalized);
+        auto features          = buildTextFeatures(codepoints);
+        items.push_back(
+            {std::move(item), std::move(normalized), std::move(codepoints), std::move(features)});
     }
 
     std::vector<DanmakuItem> output;
@@ -372,7 +388,7 @@ std::vector<DanmakuItem> mergeDanmakuData(std::vector<DanmakuItem> data) {
         bool merged = false;
         for (auto &cluster : clusters) {
             const auto &first = items[cluster.indexes.front()];
-            if (isSimilarDanmaku(item.codepoints, first.codepoints)) {
+            if (isSimilarDanmaku(item.codepoints, first.codepoints, item.features, first.features)) {
                 cluster.indexes.emplace_back(i);
                 merged = true;
                 break;
@@ -585,6 +601,7 @@ DanmakuCore::DanmakuCore() {
 DanmakuCore::~DanmakuCore() { MPV_E->unsubscribe(event_id); }
 
 void DanmakuCore::reset() {
+    danmakuDataGeneration.fetch_add(1, std::memory_order_relaxed);
     danmakuMutex.lock();
     lineNum     = 20;
     scrollLines = std::vector<std::pair<float, float>>(20, {0, 0});
@@ -607,18 +624,26 @@ void DanmakuCore::reset() {
     danmakuMutex.unlock();
 }
 
-void DanmakuCore::loadDanmakuData(const std::vector<DanmakuItem> &data) {
-    std::vector<DanmakuItem> normalizedData = DanmakuCore::DANMAKU_MERGE ? mergeDanmakuData(data) : data;
-    danmakuMutex.lock();
-    this->danmakuData = std::move(normalizedData);
-    if (!danmakuData.empty()) danmakuLoaded = true;
-    std::sort(danmakuData.begin(), danmakuData.end());
-    danmakuMutex.unlock();
+uint64_t DanmakuCore::beginDanmakuRequest() {
+    return danmakuDataGeneration.fetch_add(1, std::memory_order_relaxed) + 1;
+}
 
-    // 更新显示总行数等信息
+std::vector<DanmakuItem> DanmakuCore::prepareDanmakuData(std::vector<DanmakuItem> data, bool merge) {
+    if (merge) return mergeDanmakuData(std::move(data));
+    std::sort(data.begin(), data.end());
+    return data;
+}
+
+void DanmakuCore::loadDanmakuData(std::vector<DanmakuItem> data, uint64_t generation) {
+    if (generation != danmakuDataGeneration.load(std::memory_order_relaxed)) return;
+
+    {
+        std::lock_guard<std::mutex> lock(danmakuMutex);
+        this->danmakuData = std::move(data);
+        danmakuLoaded     = !danmakuData.empty();
+    }
+
     this->refresh();
-
-    // 通过mpv来通知弹幕加载完成
     APP_E->fire("DANMAKU_LOADED", nullptr);
 }
 

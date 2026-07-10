@@ -106,7 +106,8 @@ RecyclingGrid::RecyclingGrid() {
         if (value != 1) {
             isFlowMode = false;
         }
-        this->spanCount = value;
+        int count       = static_cast<int>(value);
+        this->spanCount = count > 0 ? count : 1;
         this->reloadData();
     });
 
@@ -157,9 +158,6 @@ RecyclingGrid::~RecyclingGrid() {
 
 void RecyclingGrid::draw(NVGcontext* vg, float x, float y, float width, float height, brls::Style style,
                          brls::FrameContext* ctx) {
-    // 触摸或鼠标滑动时会导致屏幕元素位置变更
-    // 简单地在draw函数中调用itemsRecyclingLoop 实现动态的增删元素
-    // todo：只在滑动过程中调用 itemsRecyclingLoop 以节省静止时的计算消耗
     itemsRecyclingLoop();
 
     ScrollingFrame::draw(vg, x, y, width, height, style, ctx);
@@ -276,6 +274,7 @@ void RecyclingGrid::removeCell(brls::View* view) {
 }
 
 void RecyclingGrid::setDataSource(RecyclingGridDataSource* source) {
+    recyclingDirty = true;
     if (this->dataSource) delete this->dataSource;
 
     // 允许自动加载下一页
@@ -286,6 +285,7 @@ void RecyclingGrid::setDataSource(RecyclingGridDataSource* source) {
 
 void RecyclingGrid::reloadData() {
     if (!layouted) return;
+    recyclingDirty = true;
 
     // 将所有节点从屏幕上移除放入重复利用的列表中
     auto &children = this->contentBox->getChildren();
@@ -307,8 +307,12 @@ void RecyclingGrid::reloadData() {
     }
 
     setContentOffsetY(0, false);
-    if (dataSource == nullptr) return;
-    if (dataSource->getItemCount() <= 0) {
+    if (dataSource == nullptr) {
+        knownDataItemCount = 0;
+        return;
+    }
+    knownDataItemCount = dataSource->getItemCount();
+    if (knownDataItemCount == 0) {
         contentBox->setHeight(0);
         return;
     }
@@ -349,20 +353,25 @@ void RecyclingGrid::reloadData() {
 }
 
 void RecyclingGrid::notifyDataChanged() {
-    // todo: 目前仅能处理data在原本的基础上增加的情况，需要考虑data减少或更换时的情况
-    if (!layouted) return;
+    if (!layouted || !dataSource) return;
 
-    if (dataSource) {
-        if (isFlowMode) {
-            for (size_t i = cellHeightCache.size(); i < dataSource->getItemCount(); i++) {
-                float height = dataSource->heightForRow(this, i);
-                cellHeightCache.push_back(height);
-            }
-            contentBox->setHeight(getHeightByCellIndex(this->dataSource->getItemCount()) + paddingTop + paddingBottom);
-        } else {
-            contentBox->setHeight((estimatedRowHeight + estimatedRowSpace) * this->getRowCount() + paddingTop +
-                                  paddingBottom);
+    const size_t itemCount = dataSource->getItemCount();
+    if (itemCount <= knownDataItemCount) {
+        reloadData();
+        return;
+    }
+
+    knownDataItemCount = itemCount;
+    recyclingDirty     = true;
+    if (isFlowMode) {
+        for (size_t i = cellHeightCache.size(); i < itemCount; i++) {
+            float height = dataSource->heightForRow(this, i);
+            cellHeightCache.push_back(height);
         }
+        contentBox->setHeight(getHeightByCellIndex(itemCount) + paddingTop + paddingBottom);
+    } else {
+        contentBox->setHeight((estimatedRowHeight + estimatedRowSpace) * this->getRowCount() + paddingTop +
+                              paddingBottom);
     }
     // 数据增多后重新允许加载下一页
     requestNextPage = false;
@@ -405,16 +414,33 @@ void RecyclingGrid::setDefaultCellFocus(size_t index) { this->defaultCellFocus =
 
 size_t RecyclingGrid::getDefaultCellFocus() const { return this->defaultCellFocus; }
 
-size_t RecyclingGrid::getItemCount() { return this->dataSource->getItemCount(); }
+size_t RecyclingGrid::getItemCount() { return this->dataSource ? this->dataSource->getItemCount() : 0; }
 
-size_t RecyclingGrid::getRowCount() { return (this->dataSource->getItemCount() - 1) / this->spanCount + 1; }
+size_t RecyclingGrid::getRowCount() {
+    const size_t itemCount = getItemCount();
+    if (itemCount == 0 || spanCount <= 0) return 0;
+    return itemCount / spanCount + (itemCount % spanCount != 0);
+}
 
-void RecyclingGrid::onNextPage(const std::function<void()>& callback) { this->nextPageCallback = callback; }
+void RecyclingGrid::onNextPage(const std::function<void()>& callback) {
+    this->nextPageCallback = callback;
+    recyclingDirty         = true;
+}
 
 void RecyclingGrid::itemsRecyclingLoop() {
     if (!dataSource) return;
 
+    const size_t itemCount  = dataSource->getItemCount();
     brls::Rect visibleFrame = getVisibleFrame();
+    if (!recyclingDirty && itemCount == lastItemCount && visibleFrame.getMinY() == lastVisibleMinY &&
+        visibleFrame.getMaxY() == lastVisibleMaxY) {
+        return;
+    }
+
+    recyclingDirty   = false;
+    lastItemCount    = itemCount;
+    lastVisibleMinY  = visibleFrame.getMinY();
+    lastVisibleMaxY  = visibleFrame.getMaxY();
 
     // 上方元素自动销毁
     while (true) {
@@ -556,7 +582,10 @@ float RecyclingGrid::getHeightByCellIndex(size_t index, size_t start) {
     return res;
 }
 
-void RecyclingGrid::forceRequestNextPage() { this->requestNextPage = false; }
+void RecyclingGrid::forceRequestNextPage() {
+    this->requestNextPage = false;
+    recyclingDirty        = true;
+}
 
 brls::View* RecyclingGrid::getNextCellFocus(brls::FocusDirection direction, brls::View* currentView) {
     void* parentUserData = currentView->getParentUserData();
@@ -656,10 +685,12 @@ void RecyclingGrid::onLayout() {
 
 bool RecyclingGrid::checkWidth() {
     float width = getWidth();
+    if (width != width || width == 0) return false;
     if (oldWidth == -1) {
         oldWidth = width;
+        return true;
     }
-    if ((int)oldWidth != (int)width && width != 0) {
+    if ((int)oldWidth != (int)width) {
         brls::Logger::debug("RecyclingGrid::checkWidth from {} to {}", oldWidth, width);
         oldWidth = width;
         return true;

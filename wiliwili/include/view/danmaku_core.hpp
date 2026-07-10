@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <atomic>
+#include <cstdint>
 #include <mutex>
 #include <optional>
 
@@ -170,7 +172,11 @@ public:
      * 加载弹幕数据
      * @param data 弹幕列表
      */
-    void loadDanmakuData(const std::vector<DanmakuItem> &data);
+    uint64_t beginDanmakuRequest();
+
+    static std::vector<DanmakuItem> prepareDanmakuData(std::vector<DanmakuItem> data, bool merge);
+
+    void loadDanmakuData(std::vector<DanmakuItem> data, uint64_t generation);
 
     /**
      * 实时添加一条弹幕
@@ -233,6 +239,7 @@ public:
 
 private:
     std::mutex danmakuMutex;
+    std::atomic<uint64_t> danmakuDataGeneration{0};
     bool danmakuLoaded = false;
 
     // 当前显示的第一条弹幕序号

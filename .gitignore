@@ -34,3 +34,8 @@ android-project
 CLAUDE.md
 # Other AI
 AGENT.md
+
+# Flatpak build artifacts
+flatpak-repo/
+flatpak-build.log
+*.old.flatpak.bak
