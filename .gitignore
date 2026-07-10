@@ -38,4 +38,4 @@ AGENT.md
 # Flatpak build artifacts
 flatpak-repo/
 flatpak-build.log
-*.old.flatpak.bak
+*.flatpak.bak

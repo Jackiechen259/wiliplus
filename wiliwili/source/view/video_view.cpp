@@ -1236,8 +1236,10 @@ void VideoView::setBangumiCustomSetting(const std::string& title, uint64_t seaso
 brls::View* VideoView::create() { return new VideoView(); }
 
 bool VideoView::isFullscreen() {
-    auto rect = this->getFrame();
-    return rect.getHeight() == brls::Application::contentHeight && rect.getWidth() == brls::Application::contentWidth;
+    // 全屏 video 处于无 AppletFrame 的 Activity 中（setFullScreen(true) 创建 new Activity(container)），
+    // 小窗 video 在 BasePlayerActivity 的 AppletFrame 子树中。用 AppletFrame 判断而非 getFrame() 尺寸，
+    // 避免进入全屏后 layout 尚未稳定时 isFullscreen() 误判为 false，导致 B 键走到对全屏 view 无效的 dismiss()。
+    return this->getAppletFrame() == nullptr;
 }
 
 void VideoView::setFullScreen(bool fs) {
