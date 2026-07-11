@@ -60,6 +60,8 @@ class VideoCommentResultWrapper;                                 // 视频评论
 class VideoSingleCommentDetail;                                  //单条评论的相关回复
 class VideoCommentAddResult;                                     // 发布评论的返回
 class VideoDetailResult;                                         // 视频详情
+typedef std::vector<VideoDetailResult> VideoDetailListResult;    // 相关推荐
+class UserDetailResultWrapper;                                  // UP 主资料
 class VideoDetailAllResult;  // 更详细的视频详情，包括 分P、合集、推荐、评论
 class UserRelationStat;      // 用户关注/粉丝/黑名单 数量
 class UserRelationDetail;    // 与某用户的关系详情（是否关注等）
@@ -267,6 +269,14 @@ public:
     static void get_video_detail(const std::string& bvid,
                                  const std::function<void(VideoDetailResult)>& callback = nullptr,
                                  const ErrorCallback& error                             = nullptr);
+    static void get_video_detail_related(
+        const std::string& bvid, const std::function<void(VideoDetailListResult)>& callback = nullptr,
+        const ErrorCallback& error = nullptr);
+
+    static void get_user_detail_card(uint64_t mid,
+                                     const std::function<void(UserDetailResultWrapper)>& callback = nullptr,
+                                     const ErrorCallback& error = nullptr);
+
 
     static void get_video_detail_all(const std::string& bvid,
                                      const std::function<void(VideoDetailAllResult)>& callback = nullptr,

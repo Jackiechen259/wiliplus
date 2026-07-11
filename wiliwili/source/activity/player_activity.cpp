@@ -161,6 +161,12 @@ void PlayerActivity::onContentAvailable() {
     this->recyclingGrid->onNextPage([this]() { this->requestVideoComment(std::to_string(this->videoDetailResult.aid)); });
 
     this->requestData(this->videoDetailResult);
+    // 历史记录已经携带 cid，不必等待详情接口返回后才请求播放地址。
+    if (this->videoDetailPage.cid != 0) {
+        this->preloadedVideoCid = this->videoDetailPage.cid;
+        this->requestVideoUrl(this->videoDetailResult.bvid, this->videoDetailPage.cid);
+    }
+
 
     // 点赞按钮
     this->btnAgree->getParent()->registerClickAction([this](...) {

@@ -58,6 +58,9 @@ public:
 
     /// 获取视频信息：标题、作者、简介、分P等
     void requestVideoInfo(const std::string& bvid);
+    void requestVideoRelated(const std::string& bvid);
+    void requestVideoUpInfo(uint64_t mid);
+
 
     /**
      * 获取视频地址
@@ -153,6 +156,7 @@ protected:
 
     unsigned int userUploadedVideoRequestIndex = 1;
 
+    uint64_t preloadedVideoCid = 0;                // 已提前请求播放地址的分P
     // 触发此事件，传入 SeasonEpisodeResult， 会播放对应epid的内容
     brls::Event<bilibili::SeasonEpisodeResult> changeEpisodeEvent;
 };

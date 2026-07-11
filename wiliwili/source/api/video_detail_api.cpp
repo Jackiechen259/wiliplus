@@ -83,6 +83,18 @@ void BilibiliClient::get_video_detail(uint64_t aid, const std::function<void(Vid
                                       const ErrorCallback& error) {
     HTTP::getResultAsync<VideoDetailResult>(Api::Detail, {{"aid", std::to_string(aid)}}, callback, error);
 }
+void BilibiliClient::get_video_detail_related(const std::string& bvid,
+                                              const std::function<void(VideoDetailListResult)>& callback,
+                                              const ErrorCallback& error) {
+    HTTP::getResultAsync<VideoDetailListResult>(Api::DetailRelated, {{"bvid", bvid}}, callback, error);
+}
+
+void BilibiliClient::get_user_detail_card(uint64_t mid,
+                                          const std::function<void(UserDetailResultWrapper)>& callback,
+                                          const ErrorCallback& error) {
+    HTTP::getResultAsync<UserDetailResultWrapper>(Api::UserCard, {{"mid", std::to_string(mid)}}, callback, error);
+}
+
 
 void BilibiliClient::get_video_detail_all(const std::string& bvid,
                                           const std::function<void(VideoDetailAllResult)>& callback,

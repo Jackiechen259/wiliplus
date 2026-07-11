@@ -30,6 +30,9 @@ static std::time_t g_last_update_time = 0;
 // 缓存的 mixin_key
 static std::string g_mixin_key;
 static std::mutex g_mixin_key_mutex;
+using WbiCallbackPair = std::pair<std::function<void()>, ErrorCallback>;
+static bool g_update_in_flight = false;
+static std::vector<WbiCallbackPair> g_update_waiters;
 
 /**
  * 从URL中提取key
@@ -66,44 +69,71 @@ std::string getMixinKey(const std::string& img_key, const std::string& sub_key) 
 
 void updateWbiKeys(const std::function<void()>& success, const ErrorCallback& error, bool force) {
     const std::time_t now = std::time(nullptr);
+    bool startRequest     = false;
 
-    // 如果距离上次更新时间少于1小时，则不更新
-    if (!force && now - g_last_update_time < 3600 && !g_mixin_key.empty()) {
-        success();
+    {
+        std::lock_guard lock(g_mixin_key_mutex);
+        if (!force && now - g_last_update_time < 3600 && !g_mixin_key.empty()) {
+            startRequest = false;
+        } else {
+            g_update_waiters.emplace_back(success, error);
+            if (!g_update_in_flight) {
+                g_update_in_flight = true;
+                startRequest       = true;
+            } else {
+                return;
+            }
+        }
+    }
+
+    if (!startRequest) {
+        if (success) success();
         return;
     }
 
+    auto finish = [](const std::string& mixinKey, std::time_t updatedAt, const std::string& message, int code) {
+        std::vector<WbiCallbackPair> waiters;
+        {
+            std::lock_guard lock(g_mixin_key_mutex);
+            if (!mixinKey.empty()) {
+                g_mixin_key        = mixinKey;
+                g_last_update_time = updatedAt;
+            }
+            g_update_in_flight = false;
+            waiters.swap(g_update_waiters);
+        }
+
+        for (const auto& waiter : waiters) {
+            if (!mixinKey.empty()) {
+                if (waiter.first) waiter.first();
+            } else if (waiter.second) {
+                waiter.second(message, code);
+            }
+        }
+    };
+
     auto session = HTTP::createSession();
     session->SetUrl(cpr::Url{parseLink(Api::Nav)});
-    session->GetCallback([success, error, now](const cpr::Response& r) {
+    session->GetCallback([finish, now](const cpr::Response& r) {
         if (r.error) {
-            ERROR_MSG(r.error.message, -1);
+            finish("", 0, r.error.message, -1);
             return;
         }
         if (r.status_code != 200) {
-            ERROR_MSG(HTTP::getStatusErrorMessage(Api::Nav, r.status_code), r.status_code);
+            finish("", 0, HTTP::getStatusErrorMessage(Api::Nav, r.status_code), r.status_code);
             return;
         }
         try {
             if (nlohmann::json res = nlohmann::json::parse(r.text);
                 res.contains("data") && res["data"].contains("wbi_img")) {
-                const std::string img_key = extractKeyFromUrl(res["data"]["wbi_img"]["img_url"]);
-                const std::string sub_key = extractKeyFromUrl(res["data"]["wbi_img"]["sub_url"]);
-
-                // 计算并缓存 mixin_key
-                {
-                    std::lock_guard lock(g_mixin_key_mutex);
-                    g_mixin_key        = getMixinKey(img_key, sub_key);
-                    g_last_update_time = now;
-                }
-
-                // 继续执行网络请求
-                success();
+                const std::string imgKey = extractKeyFromUrl(res["data"]["wbi_img"]["img_url"]);
+                const std::string subKey = extractKeyFromUrl(res["data"]["wbi_img"]["sub_url"]);
+                finish(getMixinKey(imgKey, subKey), now, "", 0);
                 return;
             }
         } catch (...) {
         }
-        ERROR_MSG("WBI签名失败", -412);
+        finish("", 0, "WBI签名失败", -412);
     });
 }
 

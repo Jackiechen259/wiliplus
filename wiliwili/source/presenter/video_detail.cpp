@@ -14,6 +14,7 @@
 #include "view/video_view.hpp"
 #include "view/mpv_core.hpp"
 #include "bilibili/result/mine_collection_result.h"
+#include "bilibili/util/wbi.hpp"
 #include "view/video_snapshot_core.hpp"
 
 /// 请求视频数据
@@ -173,20 +174,21 @@ void VideoDetail::requestVideoInfo(const std::string& bvid) {
     // 重置MPV
     MPVCore::instance().reset(false);
 
+    // 播放地址需要 WBI 签名；与详情请求并行预热，隐藏首次 Nav 请求耗时。
+    bilibili::wbi::updateWbiKeys(
+        []() {}, [](BILI_ERR) { brls::Logger::warning("WBI prefetch failed: {} ({})", error, code); });
+
     ASYNC_RETAIN
     brls::Logger::debug("请求视频信息: {}", bvid);
-    BILI::get_video_detail_all(
+    BILI::get_video_detail(
         bvid,
-        [ASYNC_TOKEN](const bilibili::VideoDetailAllResult& result) {
+        [ASYNC_TOKEN](const bilibili::VideoDetailResult& result) {
             brls::sync([ASYNC_TOKEN, result]() {
                 ASYNC_RELEASE
                 brls::Logger::debug("BILI::get_video_detail");
-                this->videoDetailResult = result.View;
-                this->userDetailResult  = result.Card;
-                this->videDetailRelated = result.Related;
+                this->videoDetailResult = result;
 
                 if (!this->videoDetailResult.redirect_url.empty()) {
-                    // eg: https://www.bilibili.com/bangumi/play/ep568278
                     std::vector<std::string> items;
                     pystring::split(this->videoDetailResult.redirect_url, items, "/");
                     std::string epid = items[items.size() - 1];
@@ -198,21 +200,18 @@ void VideoDetail::requestVideoInfo(const std::string& bvid) {
                     }
                 }
 
-                // 如果请求前就设定了指定分P，那么尝试打开指定的分P，两种情况会预设cid
-                // 1. 从历史记录打开视频
-                // 2. 切换分P播放
+                bool pageFound = false;
                 if (videoDetailPage.cid != 0) {
                     for (const auto& i : this->videoDetailResult.pages) {
                         if (i.cid == videoDetailPage.cid) {
                             brls::Logger::debug("获取视频分P列表: PV {}", i.cid);
                             videoDetailPage = i;
+                            pageFound       = true;
                             break;
                         }
                     }
-                } else {
-                    // 其他两种情况打开PV1
-                    // 1. 未指定PV
-                    // 2. 指定了错误的PV（比如Up主重新上传过视频，那么历史记录中保存的PV就是错误的）
+                }
+                if (!pageFound) {
                     for (const auto& i : this->videoDetailResult.pages) {
                         brls::Logger::debug("获取视频分P列表: PV1 {}", i.cid);
                         videoDetailPage = i;
@@ -225,27 +224,28 @@ void VideoDetail::requestVideoInfo(const std::string& bvid) {
                     return;
                 }
 
-                // 请求视频播放地址
-                this->requestVideoUrl(this->videoDetailResult.bvid, this->videoDetailPage.cid);
+                // 历史记录入口可能已经提前发起播放地址请求。
+                if (this->preloadedVideoCid != this->videoDetailPage.cid)
+                    this->requestVideoUrl(this->videoDetailResult.bvid, this->videoDetailPage.cid);
+                this->preloadedVideoCid = 0;
 
-                // 展示视频相关信息
+                // 先展示详情接口自带的作者资料，完整资料稍后异步刷新。
+                this->userDetailResult           = {};
+                this->userDetailResult.card.mid  = std::to_string(videoDetailResult.owner.mid);
+                this->userDetailResult.card.name = videoDetailResult.owner.name;
+                this->userDetailResult.card.face = videoDetailResult.owner.face;
                 this->onUpInfo(this->userDetailResult);
                 this->onVideoInfo(this->videoDetailResult);
-
-                // 展示分P数据
                 this->onVideoPageListInfo(this->videoDetailResult.pages);
 
-                // 展示合集数据
                 if (!videoDetailResult.ugc_season.sections.empty()) this->onUGCSeasonInfo(videoDetailResult.ugc_season);
 
-                // 请求视频评论
                 this->requestVideoComment(std::to_string(this->videoDetailResult.aid), 0, 3);
-
-                // 请求用户投稿列表
                 this->requestUploadedVideos(videoDetailResult.owner.mid, 1);
 
-                // 展示相关推荐
-                this->onRelatedVideoList(videDetailRelated);
+                // 非播放关键数据在后台并行加载。
+                this->requestVideoUpInfo(videoDetailResult.owner.mid);
+                this->requestVideoRelated(videoDetailResult.bvid);
             });
         },
         [ASYNC_TOKEN](BILI_ERR) {
@@ -256,9 +256,44 @@ void VideoDetail::requestVideoInfo(const std::string& bvid) {
             });
         });
 
-    // 请求视频点赞情况
     this->requestVideoRelationInfo(bvid);
     GA("plain_video", {{"bvid", bvid}})
+}
+
+void VideoDetail::requestVideoRelated(const std::string& bvid) {
+    ASYNC_RETAIN
+    BILI::get_video_detail_related(
+        bvid,
+        [ASYNC_TOKEN](const bilibili::VideoDetailListResult& result) {
+            brls::sync([ASYNC_TOKEN, result]() {
+                ASYNC_RELEASE
+                this->videDetailRelated = result;
+                this->onRelatedVideoList(result);
+            });
+        },
+        [ASYNC_TOKEN](BILI_ERR) {
+            ASYNC_RELEASE
+            brls::Logger::warning("Failed to load related videos: {} ({})", error, code);
+        });
+}
+
+void VideoDetail::requestVideoUpInfo(uint64_t mid) {
+    if (mid == 0) return;
+
+    ASYNC_RETAIN
+    BILI::get_user_detail_card(
+        mid,
+        [ASYNC_TOKEN](const bilibili::UserDetailResultWrapper& result) {
+            brls::sync([ASYNC_TOKEN, result]() {
+                ASYNC_RELEASE
+                this->userDetailResult = result;
+                this->onUpInfo(result);
+            });
+        },
+        [ASYNC_TOKEN](BILI_ERR) {
+            ASYNC_RELEASE
+            brls::Logger::warning("Failed to load uploader details: {} ({})", error, code);
+        });
 }
 
 /// 获取视频地址
